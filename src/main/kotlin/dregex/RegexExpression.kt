@@ -72,6 +72,7 @@ object OperatorNodeFactory {
     fun create(value: String) : OperatorNode = when(RegexOperators.getFromValue(value)){
         RegexOperators.WildCard -> WildCardOperatorNode()
         RegexOperators.Or -> OrOperatorNode()
+        RegexOperators.Concat -> ConcatNode()
     }
 }
 
@@ -100,7 +101,7 @@ abstract class OperatorNode(expression: String) : RegexExpression(expression) {
     }
 }
 
-class ConcatNode() : RegexExpression("CONCAT") {
+class ConcatNode() : OperatorNode("CONCAT") {
     override fun setNode(reg: RegexExpression) {
         if (!isLeftInitialized){
             left = reg
