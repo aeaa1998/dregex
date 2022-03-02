@@ -6,9 +6,9 @@ fun main(args: Array<String>) {
 //    println("Hello World!")
 //    Thompson("a(a|b|(ccc)*)?abb").build()
 //    Thompson("(a|b)*abb").build()
-//    SetConstructor("a|(c|b)*").build()
+    SetConstructor("(((a)))|(c|b)*").build()
 //    SetConstructor("a*|b*").build()
-    val builder = DRegex("(a|b)*abb")
-    val a = builder.build()
-    a
+//    val builder = DRegex("(a|b)*abb")
+//    val a = builder.build()
+
 }

@@ -80,9 +80,6 @@ class SetConstructor(
             finalStates = finalStates as MutableList<State>
         )
         buildGraph(nfd)
-        //TODO SIMULATE
-        nfd.simulate("ab")
-        newTransitions
     }
     fun buildGraph(nfd: NFD){
         val directedGraph = DefaultDirectedGraph<String, RegexEdge>(RegexEdge::class.java)
