@@ -8,7 +8,7 @@ class Thompson(
     val regex: String
 ) {
 
-    private val visitor = ThompsonRegexVisitor(regex)
+    private val visitor = ThompsonRegexNfaBuilder(regex)
     lateinit var nfa: NFA
     fun build(){
         val dRegex = DRegex(regex)

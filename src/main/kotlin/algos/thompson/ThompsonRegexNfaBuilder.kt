@@ -11,12 +11,13 @@ import dregex.*
 import graphs.RegexEdge
 import org.jgrapht.ext.JGraphXAdapter
 import org.jgrapht.graph.DefaultDirectedGraph
+import utils.Constants
 import java.awt.Color
 import java.io.File
 import java.util.HashMap
 import javax.imageio.ImageIO
 
-class ThompsonRegexVisitor(
+class ThompsonRegexNfaBuilder(
     val regex: String
 ) : RegexVisitor {
     lateinit var nfa: NFA
@@ -35,23 +36,22 @@ class ThompsonRegexVisitor(
     override fun visit(regex: OneOrMoreOperatorNode) {
         val initialState = State()
         val finalState = State()
-        val nestedThompsonVisitor = ThompsonRegexVisitor(regex.expression)
+        val nestedThompsonBuilder = ThompsonRegexNfaBuilder(regex.expression)
         val leftRegex = regex.left
         require(leftRegex != null)
-        leftRegex.accept(nestedThompsonVisitor)
-        val nestedNfa = nestedThompsonVisitor.nfa
+        leftRegex.accept(nestedThompsonBuilder)
+        val nestedNfa = nestedThompsonBuilder.nfa
 
-        val initialHolder = nestedNfa.transitions[nestedNfa.initialState.id]
-        nestedNfa.transitions.remove(nestedNfa.initialState.id)
-
+        val initialStatesTransitions = hashMapOf<String, List<State>>()
+        initialStatesTransitions[Constants.clean] = listOf(nestedNfa.initialState)
 
         //instantiate the transitions
         val transitions = hashMapOf<String, HashMap<String, List<State>>>()
-        transitions[initialState.id] = initialHolder?: hashMapOf()
+        transitions[initialState.id] = initialStatesTransitions
 
         //Link the end transition of the nested to the end of the nfa
         val endNestedStatesTransitions = hashMapOf<String, List<State>>()
-        endNestedStatesTransitions["Ɛ"] = listOf(finalState)
+        endNestedStatesTransitions[Constants.clean] = listOf(finalState, nestedNfa.initialState)
         nestedNfa.finalStates.forEach { nestedFinalState ->
             transitions[nestedFinalState.id] = endNestedStatesTransitions
         }
@@ -62,7 +62,7 @@ class ThompsonRegexVisitor(
 
 
 
-        val allStates = listOf(initialState, finalState) + nestedNfa.states.filter { it.id != nestedNfa.initialState.id }
+        val allStates = listOf(initialState, finalState) + nestedNfa.states
 
 
         nfa = NFA(
@@ -72,17 +72,17 @@ class ThompsonRegexVisitor(
             transitions = transitions
         )
     }
-
     override fun visit(regex: ZeroOrMoreOperatorNode) {
         val initialState = State()
         val finalState = State()
-        val nestedThompsonVisitor = ThompsonRegexVisitor(regex.expression)
+        val nestedThompsonBuilder = ThompsonRegexNfaBuilder(regex.expression)
         val leftRegex = regex.left
         require(leftRegex != null)
-        leftRegex.accept(nestedThompsonVisitor)
-        val nestedNfa = nestedThompsonVisitor.nfa
+        leftRegex.accept(nestedThompsonBuilder)
+        val nestedNfa = nestedThompsonBuilder.nfa
+
         val initialStatesTransitions = hashMapOf<String, List<State>>()
-        initialStatesTransitions["Ɛ"] = listOf(finalState, nestedNfa.initialState)
+        initialStatesTransitions[Constants.clean] = listOf(finalState, nestedNfa.initialState)
 
         //instantiate the transitions
         val transitions = hashMapOf<String, HashMap<String, List<State>>>()
@@ -90,7 +90,7 @@ class ThompsonRegexVisitor(
 
         //Link the end transition of the nested to the end of the nfa
         val endNestedStatesTransitions = hashMapOf<String, List<State>>()
-        endNestedStatesTransitions["Ɛ"] = listOf(finalState, nestedNfa.initialState)
+        endNestedStatesTransitions[Constants.clean] = listOf(finalState, nestedNfa.initialState)
         nestedNfa.finalStates.forEach { nestedFinalState ->
             transitions[nestedFinalState.id] = endNestedStatesTransitions
         }
@@ -115,13 +115,13 @@ class ThompsonRegexVisitor(
     override fun visit(regex: ZeroOrOne) {
         val initialState = State()
         val finalState = State()
-        val nestedThompsonVisitor = ThompsonRegexVisitor(regex.expression)
+        val nestedThompsonVisitor = ThompsonRegexNfaBuilder(regex.expression)
         val leftRegex = regex.left
         require(leftRegex != null)
         leftRegex.accept(nestedThompsonVisitor)
         val nestedNfa = nestedThompsonVisitor.nfa
         val initialStatesTransitions = hashMapOf<String, List<State>>()
-        initialStatesTransitions["Ɛ"] = listOf(finalState, nestedNfa.initialState)
+        initialStatesTransitions[Constants.clean] = listOf(finalState, nestedNfa.initialState)
 
         //instantiate the transitions
         val transitions = hashMapOf<String, HashMap<String, List<State>>>()
@@ -129,7 +129,7 @@ class ThompsonRegexVisitor(
 
         //Link the end transition of the nested to the end of the nfa
         val endNestedStatesTransitions = hashMapOf<String, List<State>>()
-        endNestedStatesTransitions["Ɛ"] = listOf(finalState)
+        endNestedStatesTransitions[Constants.clean] = listOf(finalState)
         nestedNfa.finalStates.forEach { nestedFinalState ->
             transitions[nestedFinalState.id] = endNestedStatesTransitions
         }
@@ -154,8 +154,8 @@ class ThompsonRegexVisitor(
     override fun visit(regex: OrOperatorNode) {
         val initialState = State()
         val finalState = State()
-        val leftThompsonVisitor = ThompsonRegexVisitor(regex.expression)
-        val rightThompsonVisitor = ThompsonRegexVisitor(regex.expression)
+        val leftThompsonVisitor = ThompsonRegexNfaBuilder(regex.expression)
+        val rightThompsonVisitor = ThompsonRegexNfaBuilder(regex.expression)
         val leftRegex = regex.left
         val rightRegex = regex.right
         require(leftRegex != null)
@@ -200,13 +200,9 @@ class ThompsonRegexVisitor(
         )
     }
 
-    override fun visit(regex: WildCardOperatorNode) {
-
-    }
-
     override fun visit(regex: ConcatNode) {
-        val leftThompsonVisitor = ThompsonRegexVisitor(regex.expression)
-        val rightThompsonVisitor = ThompsonRegexVisitor(regex.expression)
+        val leftThompsonVisitor = ThompsonRegexNfaBuilder(regex.expression)
+        val rightThompsonVisitor = ThompsonRegexNfaBuilder(regex.expression)
         val leftRegex = regex.left
         val rightRegex = regex.right
         require(leftRegex != null)
@@ -253,7 +249,6 @@ class ThompsonRegexVisitor(
                     )
                 }
             }
-
         }
 
         val imgFile = File("src/main/kotlin/outputs/nfa/${regex}.png")

@@ -17,15 +17,22 @@ fun <T> MutableList<T>.safeReplaceLast(item: T): Unit {
     }
 }
 
-fun <T> MutableList<T>.addUnique(element: T) : Unit {
+infix fun <T> MutableList<T>.plus(items: MutableList<T>): MutableList<T> {
+    val mutable: MutableList<T> = mutableListOf()
+    mutable.addAll(this)
+    mutable.addAll(items)
+    return mutable
+}
+
+fun <T> MutableList<T>.addUnique(element: T)  {
     if (!contains(element)) add(element)
 }
 
-fun <T> MutableList<T>.addAllUnique(elements: Iterable<T>) : Unit {
+fun <T> MutableList<T>.addAllUnique(elements: Iterable<T>)  {
     elements.forEach(::addUnique)
 }
 
-fun <T: Identifiable<R>, R> MutableList<T>.addAllUnique(element: T) : Unit {
+fun <T: Identifiable<R>, R> MutableList<T>.addAllUnique(element: T)  {
     val currentIds = map { it.id }
     val id = element.id
     if (!currentIds.contains(id)){

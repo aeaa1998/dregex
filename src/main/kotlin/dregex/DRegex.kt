@@ -6,12 +6,14 @@ import java.util.*
 class DRegex(
     private val regexString: String
 ) {
+    lateinit var expression : RegexExpression
     private val singleOperators: List<String> = listOf("+", "*", "?")
 
-    private fun precedence(ch: Char): Int {
-        return when (ch) {
-            '•', '|' -> return 1
-            '*', '?', '+' -> return 2
+    private fun precedence(char: Char): Int {
+        return when (char) {
+            '|' -> 1
+            '•' -> return 2
+            '*', '?', '+' -> return 3
             else -> (-1)
         }
     }
@@ -28,6 +30,7 @@ class DRegex(
             if (isOperator(postfix[i])) {
                 val nodeOp: RegexExpression
                 when  {
+                    //If it is a single operator we only pop one element from our stack and assign it
                     singleOperators.contains(letter) -> {
                         nodeOp = SingleOperatorNodeFactory.create(letter)
                         val a = st.pop()
@@ -51,7 +54,7 @@ class DRegex(
     }
 
     private fun infixToPostfix(exp: String): String {
-        var result: String = ""
+        var result = ""
         val stack = Stack<Char>()
         for (element in exp) {
             when {
@@ -83,27 +86,35 @@ class DRegex(
     }
 
 
-    private fun normalizeStack() : String {
+    private fun normalizeStack(): String {
         var normalizedString = ""
 
         regexString.forEachIndexed { index, char ->
-            val firstIsLetterOrDigitOrClosingParenthesis = char.isLetterOrDigit()  || char == ')' || char == '*' || char == '?' || char == '+'
-            val nextIsLetterOrDigitOrOpeningParenthesis = if (index < regexString.length-1) regexString[index+1].isLetterOrDigit() || char == '(' else false
-            normalizedString+=char
-            if (firstIsLetterOrDigitOrClosingParenthesis && nextIsLetterOrDigitOrOpeningParenthesis){
-                normalizedString+="•"
+            val firstIsLetterOrDigitOrClosingParenthesis = (char == '(' || char == '|').not()
+            val nextIsLetterOrDigitOrOpeningParenthesis =
+                if (index < regexString.length - 1) (regexString[index+1] == ')' || isOperator(regexString[index+1])).not() else false
+            normalizedString += char
+            if (firstIsLetterOrDigitOrClosingParenthesis && nextIsLetterOrDigitOrOpeningParenthesis) {
+                normalizedString += "•"
             }
-
         }
-        val posfix = infixToPostfix(normalizedString)
 
-        return posfix
+        return infixToPostfix(normalizedString)
 
     }
 
 
     fun build() : RegexExpression {
-        return expressionTree(normalizeStack())
+        expression =  expressionTree(normalizeStack())
+        return expression
+    }
+
+    fun getDirectExpression() : RegexExpression {
+        if (!this::expression.isInitialized){
+            build()
+        }
+        return DirectRegex(this@DRegex.expression)
+
     }
 
 

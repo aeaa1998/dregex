@@ -15,12 +15,11 @@ enum class RegexSingleOperators {
 }
 
 enum class RegexOperators {
-    Or, WildCard, Concat;
+    Or, Concat;
 
     companion object {
         fun getFromValue(value: String) : RegexOperators {
             return when(value) {
-                "." -> WildCard
                 "•" -> Concat
                 else -> Or
             }
