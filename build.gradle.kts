@@ -17,6 +17,7 @@ dependencies {
     val jgraphtVersion = "1.5.1"
     this.implementation("org.jgrapht:jgrapht-core:$jgraphtVersion")
     this.implementation("org.jgrapht:jgrapht-ext:$jgraphtVersion")
+    implementation("de.vandermeer:asciitable:0.3.2")
 }
 
 tasks.test {

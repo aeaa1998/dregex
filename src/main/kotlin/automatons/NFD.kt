@@ -23,7 +23,7 @@ class NFD(
     var currentState = initialState
 
     override fun move(currentState: State, letter: String): State? {
-        val setOfTransitionsForState = transitions[currentState.id]
+        val setOfTransitionsForState = transitions[currentState.secondaryId]
         setOfTransitionsForState?.let { possibleTransitions ->
             possibleTransitions[letter]?.let { newState ->
                 return newState
@@ -34,7 +34,7 @@ class NFD(
     }
 
     override fun simulate(value:String) : Boolean {
-        value.forEach { c ->
+        value.forEachIndexed { index, c ->
             val letter = c.toString()
 
 
@@ -42,8 +42,8 @@ class NFD(
 
 
             //If it there is no next state value is not the last char
-            if (nextForState == null && c != value.last() && value.count() != 1){
-                return false
+            if (nextForState == null && index != value.count() - 1 && value.count() != 1){
+                return@simulate false
             }else if (nextForState != null){
                 currentState = nextForState
             }

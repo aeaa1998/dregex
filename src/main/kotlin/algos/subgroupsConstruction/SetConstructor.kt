@@ -7,6 +7,7 @@ import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 import com.mxgraph.layout.mxIGraphLayout
 import com.mxgraph.model.mxICell
 import com.mxgraph.util.mxCellRenderer
+import de.vandermeer.asciitable.AsciiTable
 import extension.containsAnyId
 import extension.containsId
 import graphs.RegexEdge
@@ -21,6 +22,7 @@ import javax.imageio.ImageIO
 class SetConstructor(
     val regex: String
 ){
+    lateinit var nfd : NFD
     fun build(){
         val thompson =Thompson(regex)
         thompson.build()
@@ -79,6 +81,7 @@ class SetConstructor(
             transitions = newTransitions as HashMap<String, HashMap<String, State>>,
             finalStates = finalStates as MutableList<State>
         )
+        this.nfd = nfd
         buildGraph(nfd)
     }
     fun buildGraph(nfd: NFD){
@@ -122,6 +125,18 @@ class SetConstructor(
                 )
         }
 
+        arrayHolderFinal.clear()
+
+        nfd.initialState.let {
+            vertexToCellMap[it.secondaryId]?.let { it1 -> arrayHolderFinal.add(it1) }
+        }
+        if (arrayHolderFinal.isNotEmpty()){
+            graphAdapter.setCellStyle(
+                "strokeColor=#0000FF",
+                arrayHolderFinal.toTypedArray()
+            )
+        }
+
 
         val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter)
         layout.execute(graphAdapter.defaultParent)
@@ -129,5 +144,23 @@ class SetConstructor(
         val image = mxCellRenderer.createBufferedImage(graphAdapter, null, 2.0, Color.WHITE, true, null)
 
         ImageIO.write(image, "PNG", imgFile)
+    }
+
+    fun printDescription() {
+        val at = AsciiTable()
+        at.addRule()
+        at.addRow("Nuevo estado", "Los que contiene", *nfd.alphabet.toTypedArray())
+        at.addRule()
+        nfd.states.forEach {
+            val rowValues = mutableListOf<String>()
+            rowValues.add(it.secondaryId)
+            rowValues.add(it.id)
+            nfd.alphabet.forEach { alph ->
+                rowValues.add(nfd.transitions[it.secondaryId]?.get(alph)?.secondaryId ?: "")
+            }
+            at.addRow(*rowValues.toTypedArray())
+            at.addRule()
+        }
+        println(at.render())
     }
 }

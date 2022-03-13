@@ -14,4 +14,5 @@ class DirectFromRegexState(
     var marked = false
     override val id: String
     get() = values.reduceIds()
+
 }

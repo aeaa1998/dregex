@@ -1,7 +1,7 @@
 package automatons
 
 import java.util.*
-import kotlin.collections.HashMap
+
 
 interface Automaton<TransitionResult> {
     val states: MutableList<State>
@@ -18,6 +18,5 @@ interface Automaton<TransitionResult> {
     ) : TransitionResult?
 
     fun simulate(value:String) : Boolean
-
 }
 

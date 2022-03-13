@@ -9,14 +9,18 @@ import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 import com.mxgraph.layout.mxIGraphLayout
 import com.mxgraph.model.mxICell
 import com.mxgraph.util.mxCellRenderer
+import de.vandermeer.asciitable.AsciiTable
 import dregex.BruteForceEndNode
 import dregex.DRegex
+import dregex.DirectRegex
+import dregex.RegexExpression
 import extension.allUnique
 import extension.containsAnyId
 import extension.containsId
 import graphs.RegexEdge
 import org.jgrapht.ext.JGraphXAdapter
 import org.jgrapht.graph.DefaultDirectedGraph
+import utils.Constants
 import java.awt.Color
 import java.io.File
 import javax.imageio.ImageIO
@@ -26,13 +30,15 @@ class DirectFromRegex(
 ) {
 
     lateinit var nfd: NFD
+    lateinit var regexExpression: DirectRegex
     fun build(){
         val dRegex = DRegex(regex)
         val expression = dRegex.getDirectExpression()
+        this.regexExpression = expression
         expression.setComputedProperties()
         val initialState = DirectFromRegexState(expression.firstPos)
         val statesStack = mutableListOf(initialState)
-        val alphabet = regex.toCharArray().distinct().map { it.toString() }
+        val alphabet = regex.toCharArray().distinct().map { it.toString() }.filter { !isOperator(it) }
         val finalStates = mutableListOf<DirectFromRegexState>()
 
 
@@ -45,7 +51,9 @@ class DirectFromRegex(
                 val subU = pointer.values.filter { it.expression == letter }
                     .map {
                         it.followPos
-                    }.flatten()
+                    }
+                    .flatten()
+                    .distinctBy { it.id }
 
                 if (subU.isNotEmpty()){
 
@@ -126,6 +134,18 @@ class DirectFromRegex(
             )
         }
 
+        arrayHolderFinal.clear()
+
+        nfd.initialState.let {
+            vertexToCellMap[it.secondaryId]?.let { it1 -> arrayHolderFinal.add(it1) }
+        }
+        if (arrayHolderFinal.isNotEmpty()){
+            graphAdapter.setCellStyle(
+                "strokeColor=#0000FF",
+                arrayHolderFinal.toTypedArray()
+            )
+        }
+
 
         val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter)
         layout.execute(graphAdapter.defaultParent)
@@ -134,4 +154,32 @@ class DirectFromRegex(
 
         ImageIO.write(image, "PNG", imgFile)
     }
+
+    fun printDescription() {
+        println("\nDESCRIPCION METODO DIRECTO\n")
+        val at = AsciiTable()
+        at.addRule()
+        at.addRow("Nuevo estado", "Expresiones que contiene", *nfd.alphabet.toTypedArray())
+        at.addRule()
+        nfd.states.forEach {
+            val rowValues = mutableListOf<String>()
+            rowValues.add(it.secondaryId.toString())
+            rowValues.add((it as DirectFromRegexState).values.map { it.expression }.joinToString(", "))
+            nfd.alphabet.forEach { alph ->
+                rowValues.add(nfd.transitions[it.secondaryId]?.get(alph)?.secondaryId ?: "")
+            }
+            at.addRow(*rowValues.toTypedArray())
+            at.addRule()
+        }
+        println(at.render())
+    }
+
+    private fun isOperator(ch: String): Boolean {
+        return ch == Constants.concat || ch == "|" || ch == "?" || ch == "*" || ch == "+"
+    }
+
+    private fun isParenthesis(ch: String): Boolean {
+        return ch == "(" || ch == ")"
+    }
+
 }

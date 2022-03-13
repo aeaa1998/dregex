@@ -264,12 +264,27 @@ class ThompsonRegexNfaBuilder(
         nfa.finalStates.forEach {
             vertexToCellMap[it.secondaryId]?.let { it1 -> arrayHolderFinal.add(it1) }
         }
+
+
         if (arrayHolderFinal.isNotEmpty()){
             graphAdapter.setCellStyle(
                 "strokeColor=#CCCC00",
                 arrayHolderFinal.toTypedArray()
             )
         }
+
+        arrayHolderFinal.clear()
+
+        nfa.initialState.let {
+            vertexToCellMap[it.secondaryId]?.let { it1 -> arrayHolderFinal.add(it1) }
+        }
+        if (arrayHolderFinal.isNotEmpty()){
+            graphAdapter.setCellStyle(
+                "strokeColor=#0000FF",
+                arrayHolderFinal.toTypedArray()
+            )
+        }
+
         val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter)
         layout.execute(graphAdapter.defaultParent)
 

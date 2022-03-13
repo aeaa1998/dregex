@@ -1,14 +1,25 @@
 package dregex
 
 import algos.RegexVisitor
+import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
+import com.mxgraph.layout.mxIGraphLayout
+import com.mxgraph.util.mxCellRenderer
+import de.vandermeer.asciitable.AsciiTable
 import extension.addAllUnique
 import extension.plus
+import graphs.RegexEdge
+import org.jgrapht.ext.JGraphXAdapter
+import org.jgrapht.graph.DefaultDirectedGraph
 import utils.Constants
 import utils.Identifiable
+import java.awt.Color
+import java.io.File
+import javax.imageio.ImageIO
 import kotlin.properties.Delegates
 
 object RegexLeafProvider{
     var id = 1
+    var id2 = 1
 }
 
 abstract class RegexExpression(
@@ -30,10 +41,70 @@ abstract class RegexExpression(
 
     final override var id: Int = -1
 
+    val id2: Int
+
     val isLeftInitialized: Boolean
     get() = left != null
 
+    init {
+        id2 = RegexLeafProvider.id2
+        RegexLeafProvider.id2++
+    }
+
     abstract fun accept(regexVisitor: RegexVisitor)
+
+    fun setToNodeGraph(directedGraph: DefaultDirectedGraph<String, RegexEdge>){
+        directedGraph.addVertex("${expression}_$id2")
+        left?.let {
+            it.setToNodeGraph(directedGraph)
+            directedGraph.addEdge("${expression}_$id2", "${it.expression}_${it.id2}")
+
+        }
+
+        right?.let {
+            it.setToNodeGraph(directedGraph)
+            directedGraph.addEdge("${expression}_$id2", "${it.expression}_${it.id2}")
+        }
+
+    }
+
+    fun printTable(
+        table: AsciiTable
+    ){
+        table.addRow(
+            "${expression}_$id2",
+            if (isLeaf) id else "",
+            lastPos.map { it.id }.joinToString(),
+            firstPos.map { it.id }.joinToString(),
+            followPos.map { it.id }.joinToString()
+        )
+        table.addRule()
+        left?.printTable(table)
+
+        right?.printTable(table)
+    }
+
+    fun buildGraphFromE(){
+        val directedGraph = DefaultDirectedGraph<String, RegexEdge>(RegexEdge::class.java)
+        setToNodeGraph(directedGraph)
+
+
+        val imgFile = File("src/main/kotlin/outputs/tree/${expression}.png")
+        if (imgFile.exists()){
+            imgFile.delete()
+            imgFile.createNewFile()
+        }else{
+            imgFile.createNewFile()
+        }
+        val graphAdapter = JGraphXAdapter(directedGraph)
+
+        val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter)
+        layout.execute(graphAdapter.defaultParent)
+
+        val image = mxCellRenderer.createBufferedImage(graphAdapter, null, 2.0, Color.WHITE, true, null)
+
+        ImageIO.write(image, "PNG", imgFile)
+    }
 
 
 }
@@ -52,7 +123,7 @@ open class WordNode(expression: String) : RegexExpression(expression) {
     override fun setComputedProperties() {
         isNullable = expression == Constants.clean
         firstPos = mutableListOf<RegexExpression>(this)
-        lastPos = mutableListOf<RegexExpression>(this)
+        lastPos = mutableListOf(this)
     }
 
 

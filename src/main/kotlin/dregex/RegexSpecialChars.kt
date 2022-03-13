@@ -1,5 +1,7 @@
 package dregex
 
+import utils.Constants
+
 enum class RegexSingleOperators {
     ZeroOrMore, OneOrMore, OneOrZero;
 
@@ -20,7 +22,7 @@ enum class RegexOperators {
     companion object {
         fun getFromValue(value: String) : RegexOperators {
             return when(value) {
-                "•" -> Concat
+                "•", Constants.concat -> Concat
                 else -> Or
             }
         }
