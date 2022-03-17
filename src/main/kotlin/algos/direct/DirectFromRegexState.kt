@@ -5,7 +5,14 @@ import dregex.RegexExpression
 import extension.reduceIds
 import utils.Identifiable
 
-
+/**
+ * This class represents the state of a direct from regex graph
+ * @constructor
+ * @param values [List] Regex expression list representing that state
+ *
+ * @property marked [Boolean] Tells if state has been marked
+ * @property id [String] Id represented by the current regex expressions
+ */
 class DirectFromRegexState(
     val values: List<RegexExpression>
 ) :

@@ -2,6 +2,10 @@ package algos
 
 import dregex.*
 
+/**
+ * Interface to allow to visit a regex tree
+ * it is intended to do different actions depending on the node visited
+ */
 interface RegexVisitor {
     //Word
     fun visit(regex: WordNode)

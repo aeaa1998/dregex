@@ -8,6 +8,7 @@ import com.mxgraph.layout.mxIGraphLayout
 import com.mxgraph.model.mxICell
 import com.mxgraph.util.mxCellRenderer
 import de.vandermeer.asciitable.AsciiTable
+import dregex.DirectRegex
 import extension.containsAnyId
 import extension.containsId
 import graphs.RegexEdge
@@ -20,19 +21,31 @@ import javax.imageio.ImageIO
 import javax.swing.SwingConstants
 
 
+/**
+ * Class to build the NFD from the thompson NFA
+ * @constructor
+ * @param regex [String] The string to build the Regex tree
+ *
+ * @property nfd [NFD] The nfd to initialize
+ */
 class SetConstructor(
     val regex: String
 ){
     lateinit var nfd : NFD<SetConstructorState>
     fun build() : SetConstructor {
+        //We create our thompson object
         val thompson =Thompson(regex)
-        thompson.build()
-        val nfa = thompson.nfa
+        //Build our nfa
+        val nfa = thompson.build().nfa
 
+        //Get the alphabet all the possible values excluding clean
         val alphabet = nfa.alphabet.filter { it != Constants.clean }
+        //Our initial state of the nfa apply e closure to get all the current states
         val initialState = SetConstructorState(nfa.eClosure(nfa.initialState))
 
+        //Initialize our stack
         val statesStack = mutableListOf(initialState)
+        //Initialize out list of final states
         val finalStates = mutableListOf<SetConstructorState>()
 
         //First case
@@ -47,6 +60,7 @@ class SetConstructor(
             val pointer = statesStack[pointerIndex]
             pointer.marked = true
             for (transitionLetter in alphabet){
+                //We create U with the states by applying the transition letter and then e closure
                 var U = SetConstructorState(nfa.eClosure(
                     nfa.move(pointer.values, transitionLetter)
                 ))

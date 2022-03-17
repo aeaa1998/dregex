@@ -2,7 +2,9 @@ package automatons
 
 import java.util.*
 
-
+/**
+ * Purpose of this interface is to define the most important things a Automaton has so we dont forget
+ */
 interface Automaton<StateImpl: State, TransitionResult> {
     val states: MutableList<StateImpl>
     val initialState: StateImpl
