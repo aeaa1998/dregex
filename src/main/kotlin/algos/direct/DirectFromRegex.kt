@@ -24,51 +24,87 @@ import utils.Constants
 import java.awt.Color
 import java.io.File
 import javax.imageio.ImageIO
+import javax.swing.SwingConstants
 
+/**
+ * Class to build the NFD directly from the regex.
+ * @constructor
+ * @param regex [String] The string to build the Regex tree
+ *
+ * @property nfd [NFD] The nfd to initialize
+ * @property regexExpression [DirectRegex] The direct regex expression tree
+ */
 class DirectFromRegex(
     val regex: String
 ) {
 
-    lateinit var nfd: NFD
+    lateinit var nfd: NFD<DirectFromRegexState>
     lateinit var regexExpression: DirectRegex
-    fun build(){
+
+    /**
+     * Function to build the NFD and plot it
+     * @return [DirectFromRegex] We return the instance to let us an easier access to the nfd
+     */
+    fun build() : DirectFromRegex {
+        //Build the tree
         val dRegex = DRegex(regex)
+        //With #
         val expression = dRegex.getDirectExpression()
         this.regexExpression = expression
+        //Set all the properties like followPos, startPos, endPos
         expression.setComputedProperties()
+
+        //Set an initial state
         val initialState = DirectFromRegexState(expression.firstPos)
+        //Add it to our stack
         val statesStack = mutableListOf(initialState)
+        //Get the alphabet
         val alphabet = regex.toCharArray().distinct().map { it.toString() }.filter { !isOperator(it) }
+        //Init our final states list
         val finalStates = mutableListOf<DirectFromRegexState>()
 
-
+        //Pointer to tell where we are
         var pointerIndex = 0
+        //Al the transitions we are storing
         val newTransitions: HashMap<String, HashMap<String, DirectFromRegexState>> = hashMapOf()
         do {
+            //Get the current pointer
             val pointer = statesStack[pointerIndex]
+            //Mark it as true
             pointer.marked = true
+            //Iterate the alphabet
             for (letter in alphabet){
+                //Ok so we will get all the regex expressions nodes where their expression is equal to the current letter
                 val subU = pointer.values.filter { it.expression == letter }
+                    //We get all the of the following positions
                     .map {
                         it.followPos
                     }
+                    //We need to flat the array
                     .flatten()
+                    //Get unique values by id
                     .distinctBy { it.id }
 
+                //If the new group is not empty we must proceed
                 if (subU.isNotEmpty()){
-
+                    //Get the U node
                     var U = DirectFromRegexState(subU)
 
                     //Does not contain U
                     if (statesStack.containsId(U).not()){
+                        //We add it
                         statesStack.add(U)
+                        //Check if any of its expressions is the last one (terminal state)
                         val isFinal = subU.any { it is BruteForceEndNode }
                         if (isFinal){
+                            //Add it
                             finalStates.add(U)
                         }
                     }else{
+                        //If it contains the value from the stack we get its reference
                         U = statesStack.first { it.id == U.id }
                     }
+                    //If there are no transitions group created we create them
                     if (!newTransitions.containsKey(pointer.secondaryId)) newTransitions[pointer.secondaryId] = hashMapOf()
                     //Set transition
                     newTransitions[pointer.secondaryId]?.set(letter, U)
@@ -81,34 +117,41 @@ class DirectFromRegex(
                 break
             }
         }
+            //While there is at least one state market we will continue
         while (statesStack.any { it.marked.not() })
-
+        //Set our NFD
         nfd = NFD(
-            states = statesStack as MutableList<State>,
+            states = statesStack,
             initialState = initialState,
-            transitions = newTransitions as HashMap<String, HashMap<String, State>>,
-            finalStates = finalStates as MutableList<State>
+            transitions = newTransitions,
+            finalStates = finalStates
         )
 
         buildGraph(nfd)
+        return this
     }
 
-    fun buildGraph(nfd: NFD){
+
+    fun <StateImpl: State> buildGraph(nfd: NFD<StateImpl>){
         val directedGraph = DefaultDirectedGraph<String, RegexEdge>(RegexEdge::class.java)
         nfd.states.forEach { state ->
-
-            directedGraph.addVertex((state as DirectFromRegexState).secondaryId)
+            directedGraph.addVertex(state.secondaryId)
         }
-        nfd.transitions.forEach { state, targetsWithExp ->
-            targetsWithExp.forEach { expression, target ->
 
+        nfd.transitions.forEach { state, targetsWithExp ->
+            val grouped: HashMap<String, MutableList<String>> = hashMapOf()
+            targetsWithExp.forEach { expression, target ->
+                val sec = target.secondaryId
+                if (grouped.containsKey(sec).not()) grouped[sec] = mutableListOf()
+                grouped[sec]?.add(expression)
+            }
+            grouped.forEach { target, expressions ->
+                val expression = expressions.joinToString(", ")
                 directedGraph.addEdge(
                     state,
-                    (target as DirectFromRegexState).secondaryId,
+                    target,
                     RegexEdge(expression)
                 )
-
-
             }
 
         }
@@ -147,7 +190,7 @@ class DirectFromRegex(
         }
 
 
-        val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter)
+        val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter, SwingConstants.WEST)
         layout.execute(graphAdapter.defaultParent)
 
         val image = mxCellRenderer.createBufferedImage(graphAdapter, null, 2.0, Color.WHITE, true, null)
@@ -163,8 +206,8 @@ class DirectFromRegex(
         at.addRule()
         nfd.states.forEach {
             val rowValues = mutableListOf<String>()
-            rowValues.add(it.secondaryId.toString())
-            rowValues.add((it as DirectFromRegexState).values.map { it.expression }.joinToString(", "))
+            rowValues.add(it.secondaryId)
+            rowValues.add(it.values.map { it.expression }.joinToString(", "))
             nfd.alphabet.forEach { alph ->
                 rowValues.add(nfd.transitions[it.secondaryId]?.get(alph)?.secondaryId ?: "")
             }

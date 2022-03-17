@@ -17,16 +17,18 @@ import utils.Constants
 import java.awt.Color
 import java.io.File
 import javax.imageio.ImageIO
+import javax.swing.SwingConstants
 
 
 class SetConstructor(
     val regex: String
 ){
-    lateinit var nfd : NFD
-    fun build(){
+    lateinit var nfd : NFD<SetConstructorState>
+    fun build() : SetConstructor {
         val thompson =Thompson(regex)
         thompson.build()
         val nfa = thompson.nfa
+
         val alphabet = nfa.alphabet.filter { it != Constants.clean }
         val initialState = SetConstructorState(nfa.eClosure(nfa.initialState))
 
@@ -76,26 +78,27 @@ class SetConstructor(
         }while (statesStack.any { it.marked.not() })
 
         val nfd = NFD(
-            states = statesStack as MutableList<State>,
+            states = statesStack,
             initialState = initialState,
-            transitions = newTransitions as HashMap<String, HashMap<String, State>>,
-            finalStates = finalStates as MutableList<State>
+            transitions = newTransitions,
+            finalStates = finalStates
         )
         this.nfd = nfd
         buildGraph(nfd)
+        return this
     }
-    fun buildGraph(nfd: NFD){
+    fun <StateImpl: State>buildGraph(nfd: NFD<StateImpl>){
         val directedGraph = DefaultDirectedGraph<String, RegexEdge>(RegexEdge::class.java)
         nfd.states.forEach { state ->
 
-            directedGraph.addVertex((state as SetConstructorState).secondaryId)
+            directedGraph.addVertex(state.secondaryId)
         }
         nfd.transitions.forEach { state, targetsWithExp ->
             targetsWithExp.forEach { expression, target ->
 
                 directedGraph.addEdge(
                     state,
-                    (target as SetConstructorState).secondaryId,
+                    target.secondaryId,
                     RegexEdge(expression)
                 )
 
@@ -138,7 +141,7 @@ class SetConstructor(
         }
 
 
-        val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter)
+        val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter, SwingConstants.WEST)
         layout.execute(graphAdapter.defaultParent)
 
         val image = mxCellRenderer.createBufferedImage(graphAdapter, null, 2.0, Color.WHITE, true, null)

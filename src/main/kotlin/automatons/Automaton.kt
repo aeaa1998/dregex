@@ -3,14 +3,14 @@ package automatons
 import java.util.*
 
 
-interface Automaton<TransitionResult> {
-    val states: MutableList<State>
-    val initialState: State
+interface Automaton<StateImpl: State, TransitionResult> {
+    val states: MutableList<StateImpl>
+    val initialState: StateImpl
 
     val transitions: HashMap<String, HashMap<String, TransitionResult>>
 
     val alphabet: List<String>
-    val finalStates: MutableList<State>
+    val finalStates: MutableList<StateImpl>
 
     fun move(
         currentState: TransitionResult,

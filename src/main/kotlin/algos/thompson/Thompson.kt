@@ -1,6 +1,7 @@
 package algos.thompson
 
 import automatons.NFA
+import automatons.State
 import dregex.*
 
 
@@ -9,8 +10,8 @@ class Thompson(
 ) {
 
     private val visitor = ThompsonRegexNfaBuilder(regex)
-    lateinit var nfa: NFA
-    fun build(){
+    lateinit var nfa: NFA<State>
+    fun build() : Thompson {
         val dRegex = DRegex(regex)
         val expression = dRegex.build()
         expression.accept(visitor)
@@ -18,6 +19,7 @@ class Thompson(
         //We build the graph
         visitor.buildGraph()
         nfa = resultNFA
+        return this
     }
 
 }

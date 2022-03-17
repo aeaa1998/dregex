@@ -16,11 +16,12 @@ import java.awt.Color
 import java.io.File
 import java.util.HashMap
 import javax.imageio.ImageIO
+import javax.swing.SwingConstants
 
 class ThompsonRegexNfaBuilder(
     val regex: String
 ) : RegexVisitor {
-    lateinit var nfa: NFA
+    lateinit var nfa: NFA<State>
     override fun visit(regex: WordNode) {
         val initialState = State()
         val finalState = State()
@@ -238,6 +239,7 @@ class ThompsonRegexNfaBuilder(
 
     fun buildGraph(){
         val directedGraph = DefaultDirectedGraph<String, RegexEdge>(RegexEdge::class.java)
+
         nfa.states.forEach { state -> directedGraph.addVertex(state.id) }
         nfa.transitions.forEach { state, targetsWithExp ->
             targetsWithExp.forEach { expression, targets ->
@@ -259,6 +261,7 @@ class ThompsonRegexNfaBuilder(
             imgFile.createNewFile()
         }
         val graphAdapter = JGraphXAdapter(directedGraph)
+
         val vertexToCellMap: HashMap<String, mxICell> = graphAdapter.vertexToCellMap
         val arrayHolderFinal = mutableListOf<mxICell>()
         nfa.finalStates.forEach {
@@ -285,7 +288,7 @@ class ThompsonRegexNfaBuilder(
             )
         }
 
-        val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter)
+        val layout: mxIGraphLayout = mxHierarchicalLayout(graphAdapter, SwingConstants.WEST)
         layout.execute(graphAdapter.defaultParent)
 
         val image = mxCellRenderer.createBufferedImage(graphAdapter, null, 2.0, Color.WHITE, true, null)

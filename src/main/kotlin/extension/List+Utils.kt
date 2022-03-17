@@ -2,13 +2,45 @@ package extension
 
 import utils.Identifiable
 
+fun requiredInput() : String {
+    while(true){
+        val input = readLine()
+        if(input!=null && input.isNotBlank()) return input
+        println("Campo obligatorio")
+    }
+}
+
+fun getIntInput(text: String = "Ingrese una opción: ") : Int {
+    while(true){
+        print(text)
+        val input = readLine()
+        input?.toIntOrNull()?.let {
+            return it
+        }
+        println("Ingrese un número válido")
+    }
+}
+
+fun List<String>.getSelectedOption(): Int {
+    while (true){
+        forEachIndexed { index, string ->
+            println("${ index + 1 } $string ")
+        }
+        val input = getIntInput()
+        if (input < 1 || input > count()){
+            println("Ingrese una opcion válida")
+        }else{
+            return input - 1
+        }
+    }
+}
 
 fun <T> List<T>.safeLast(): T? {
     if (isNotEmpty()) return last()
     else return null
 }
 
-fun <T> MutableList<T>.safeReplaceLast(item: T): Unit {
+fun <T> MutableList<T>.safeReplaceLast(item: T) {
     if (isNotEmpty()){
         val index = count() - 1
         this[index] = item

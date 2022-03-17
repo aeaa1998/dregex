@@ -6,12 +6,12 @@ import extension.containsId
 import java.util.*
 import kotlin.collections.HashMap
 
-class NFD(
-    override val states: MutableList<State>,
-    override val initialState: State,
-    override val transitions: HashMap<String, HashMap<String, State>>,
-    override val finalStates: MutableList<State>
-) : Automaton<State> {
+class NFD<StateImpl: State>(
+    override val states: MutableList<StateImpl>,
+    override val initialState: StateImpl,
+    override val transitions: HashMap<String, HashMap<String, StateImpl>>,
+    override val finalStates: MutableList<StateImpl>
+) : Automaton<StateImpl, StateImpl> {
 
     //Compute the alphabet when its needed we know its all the unique transition keys for each
     //state
@@ -22,7 +22,7 @@ class NFD(
     }
     var currentState = initialState
 
-    override fun move(currentState: State, letter: String): State? {
+    override fun move(currentState: StateImpl, letter: String): StateImpl? {
         val setOfTransitionsForState = transitions[currentState.secondaryId]
         setOfTransitionsForState?.let { possibleTransitions ->
             possibleTransitions[letter]?.let { newState ->

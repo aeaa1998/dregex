@@ -257,7 +257,7 @@ abstract class OperatorNode(expression: String) : RegexExpression(expression) {
     }
 }
 
-open class ConcatNode() : OperatorNode("CONCAT") {
+open class ConcatNode(expression: String = Constants.concat) : OperatorNode(expression) {
     override fun setNode(reg: RegexExpression) {
         if (!isLeftInitialized){
             left = reg

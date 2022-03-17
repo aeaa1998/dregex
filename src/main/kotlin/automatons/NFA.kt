@@ -5,12 +5,12 @@ import extension.addUnique
 import extension.containsId
 import utils.Constants
 
-class NFA(
-    override val states: MutableList<State>,
-    override val initialState: State,
-    override val transitions: HashMap<String, HashMap<String, List<State>>>,
-    override val finalStates: MutableList<State>
-) : Automaton<List<State>> {
+class NFA<StateImpl: State>(
+    override val states: MutableList<StateImpl>,
+    override val initialState: StateImpl,
+    override val transitions: HashMap<String, HashMap<String, List<StateImpl>>>,
+    override val finalStates: MutableList<StateImpl>
+) : Automaton<StateImpl, List<StateImpl>> {
 
     var currentState = listOf(initialState)
 
@@ -22,7 +22,7 @@ class NFA(
         alph
     }
 
-    override fun move(currentState: List<State>, letter: String) : List<State> {
+    override fun move(currentState: List<StateImpl>, letter: String) : List<StateImpl> {
         val setOfTransitionsForState = currentState.map { state: State ->
             transitions[state.id] ?: hashMapOf()
         }.filter {
@@ -37,13 +37,14 @@ class NFA(
             //Only the resulting states
             stateList.isNotEmpty()
         }.flatten()
-//        currentState = resultingStatesFromState
+
         return resultingStatesFromState
     }
 
 
-    fun eClosure(state: State, states: List<State> = listOf()) : List<State> {
-        val eClosureStatesList: MutableList<State> = mutableListOf(state)
+    //This is the recursive call
+    fun eClosure(state: StateImpl, states: List<StateImpl> = listOf()) : List<StateImpl> {
+        val eClosureStatesList: MutableList<StateImpl> = mutableListOf(state)
 
         val possibleStates = (transitions[state.id]?.get(Constants.clean) ?: listOf())
                 //Only the ones we dont have
@@ -69,8 +70,8 @@ class NFA(
 
     }
 
-    fun eClosure(states: List<State>) : List<State> {
-        val eClosureStatesList: MutableList<State> = mutableListOf()
+    fun eClosure(states: List<StateImpl>) : List<StateImpl> {
+        val eClosureStatesList: MutableList<StateImpl> = mutableListOf()
         eClosureStatesList.addAllUnique(states)
         eClosureStatesList.addAllUnique(states.map(this::eClosure).flatten())
 
@@ -78,17 +79,17 @@ class NFA(
     }
 
     override fun simulate(value:String) : Boolean {
-        value.forEach { c ->
+        value.forEachIndexed { index, c ->
             val letter = c.toString()
-            val newStates = mutableListOf<State>()
-            currentState.forEach { currentState ->
+            val newStates = mutableListOf<StateImpl>()
+            eClosure(currentState).forEach { currentState ->
                 val nextForState = eClosure(transitions[currentState.id]?.get(letter) ?: listOf())
 
                 newStates.addAllUnique(nextForState)
 
             }
             //If it is empty and value is not the last char
-            if (newStates.isEmpty() && c != value.last()){
+            if (newStates.isEmpty() && index != value.count()){
                 return false
             }
             currentState = newStates
