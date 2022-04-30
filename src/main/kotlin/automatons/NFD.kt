@@ -3,14 +3,18 @@ package automatons
 import extension.addAllUnique
 import extension.addUnique
 import extension.containsId
+import kotlinx.serialization.Serializable
+import tokens.TokenExpression
 import java.util.*
 import kotlin.collections.HashMap
 
-class NFD<StateImpl: State>(
+@Serializable
+open class NFD<StateImpl: State>(
     override val states: MutableList<StateImpl>,
     override val initialState: StateImpl,
     override val transitions: HashMap<String, HashMap<String, StateImpl>>,
-    override val finalStates: MutableList<StateImpl>
+    override val finalStates: MutableList<StateImpl>,
+    val transitionTokens: HashMap<String, HashMap<String, TokenExpression>> = hashMapOf()
 ) : Automaton<StateImpl, StateImpl> {
 
     //Compute the alphabet when its needed we know its all the unique transition keys for each
@@ -20,7 +24,8 @@ class NFD<StateImpl: State>(
         transitions.forEach { (_, u) -> alph.addAllUnique(u.keys) }
         alph
     }
-    var currentState = initialState
+
+    var currentState: StateImpl = initialState
 
     override fun move(currentState: StateImpl, letter: String): StateImpl? {
         val setOfTransitionsForState = transitions[currentState.secondaryId]
@@ -31,6 +36,10 @@ class NFD<StateImpl: State>(
 
         }
         return null
+    }
+
+    fun reset(){
+        this.currentState = initialState
     }
 
     override fun simulate(value:String) : Boolean {
@@ -52,4 +61,6 @@ class NFD<StateImpl: State>(
         //final states contains current state
         return finalStates.containsId(currentState)
     }
+
+    fun isFinal(state: StateImpl) = finalStates.containsId(state)
 }

@@ -3,6 +3,7 @@ package algos.direct
 import automatons.State
 import dregex.RegexExpression
 import extension.reduceIds
+import kotlinx.serialization.Serializable
 import utils.Identifiable
 
 /**
@@ -13,6 +14,8 @@ import utils.Identifiable
  * @property marked [Boolean] Tells if state has been marked
  * @property id [String] Id represented by the current regex expressions
  */
+
+
 class DirectFromRegexState(
     val values: List<RegexExpression>
 ) :
@@ -22,4 +25,10 @@ class DirectFromRegexState(
     override val id: String
     get() = values.reduceIds()
 
+    fun simplified() : DirectRegexSimplified{
+        return  DirectRegexSimplified(
+            id,
+            secondaryId
+        )
+    }
 }

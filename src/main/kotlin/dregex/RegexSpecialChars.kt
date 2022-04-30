@@ -17,7 +17,7 @@ enum class RegexSingleOperators {
 }
 
 enum class RegexOperators {
-    Or, Concat;
+    Or, Concat, TokenOr;
 
     companion object {
         fun getFromValue(value: String) : RegexOperators {

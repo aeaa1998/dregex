@@ -1,8 +1,5 @@
 package algos.direct
 
-import algos.subgroupsConstruction.SetConstructorState
-import algos.thompson.ThompsonRegexNfaBuilder
-import automatons.NFA
 import automatons.NFD
 import automatons.State
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
@@ -11,18 +8,17 @@ import com.mxgraph.model.mxICell
 import com.mxgraph.util.mxCellRenderer
 import de.vandermeer.asciitable.AsciiTable
 import dregex.BruteForceEndNode
-import dregex.DRegex
 import dregex.DirectRegex
 import dregex.RegexExpression
-import extension.allUnique
-import extension.containsAnyId
 import extension.containsId
 import graphs.RegexEdge
 import org.jgrapht.ext.JGraphXAdapter
 import org.jgrapht.graph.DefaultDirectedGraph
+import tokens.TokenExpression
 import utils.Constants
 import java.awt.Color
 import java.io.File
+import java.util.*
 import javax.imageio.ImageIO
 import javax.swing.SwingConstants
 
@@ -35,10 +31,11 @@ import javax.swing.SwingConstants
  * @property regexExpression [DirectRegex] The direct regex expression tree
  */
 class DirectFromRegex(
-    val regex: String
+    val regexString: String,
+    val regex: RegexExpression
 ) {
 
-    lateinit var nfd: NFD<DirectFromRegexState>
+    lateinit var nfd: NFD<DirectRegexSimplified>
     lateinit var regexExpression: DirectRegex
 
     /**
@@ -47,26 +44,51 @@ class DirectFromRegex(
      */
     fun build() : DirectFromRegex {
         //Build the tree
-        val dRegex = DRegex(regex)
+
         //With #
-        val expression = dRegex.getDirectExpression()
+        val expression = DirectRegex(regex)
         this.regexExpression = expression
-        //Set all the properties like followPos, startPos, endPos
+
         expression.setComputedProperties()
+//        val stack = Stack<RegexExpression>()
+//        stack.push(expression)
+//        var head: RegexExpression = expression
+
+//        while (!stack.isEmpty()){
+//            val current = stack.peek()
+//            val finishedSubtrees = current.right === head || current.left === head
+//            val isLeaf = current.left == null && current.right == null
+//            if (finishedSubtrees || isLeaf){
+//                stack.pop()
+//                //Set all the properties like followPos, startPos, endPos
+//                current.setComputedProperties()
+//                head = current
+//            }else{
+//                if (current.right != null){
+//                    stack.push(current.right)
+//                }
+//                if (current.left != null){
+//                    stack.push(current.left)
+//                }
+//            }
+//
+//
+//        }
 
         //Set an initial state
-        val initialState = DirectFromRegexState(expression.firstPos)
+        val initialState = DirectFromRegexState(expression.firstPos.toList())
         //Add it to our stack
         val statesStack = mutableListOf(initialState)
         //Get the alphabet
-        val alphabet = regex.toCharArray().distinct().map { it.toString() }.filter { !isOperator(it) }
+        val alphabet = regexString.toCharArray().distinct().map { it.toString() }
         //Init our final states list
         val finalStates = mutableListOf<DirectFromRegexState>()
 
         //Pointer to tell where we are
         var pointerIndex = 0
         //Al the transitions we are storing
-        val newTransitions: HashMap<String, HashMap<String, DirectFromRegexState>> = hashMapOf()
+        val newTransitions: HashMap<String, HashMap<String, DirectRegexSimplified>> = hashMapOf()
+        val transitionTokens: HashMap<String, HashMap<String, TokenExpression>> = hashMapOf()
         do {
             //Get the current pointer
             val pointer = statesStack[pointerIndex]
@@ -75,7 +97,8 @@ class DirectFromRegex(
             //Iterate the alphabet
             for (letter in alphabet){
                 //Ok so we will get all the regex expressions nodes where their expression is equal to the current letter
-                val subU = pointer.values.filter { it.expression == letter }
+                val validValuesFromPointer = pointer.values.filter { it.expression == letter }
+                val subU = validValuesFromPointer
                     //We get all the of the following positions
                     .map {
                         it.followPos
@@ -89,13 +112,13 @@ class DirectFromRegex(
                 if (subU.isNotEmpty()){
                     //Get the U node
                     var U = DirectFromRegexState(subU)
-
+                    val isFinal = subU.any { it is BruteForceEndNode }
                     //Does not contain U
                     if (statesStack.containsId(U).not()){
                         //We add it
                         statesStack.add(U)
                         //Check if any of its expressions is the last one (terminal state)
-                        val isFinal = subU.any { it is BruteForceEndNode }
+
                         if (isFinal){
                             //Add it
                             finalStates.add(U)
@@ -104,10 +127,43 @@ class DirectFromRegex(
                         //If it contains the value from the stack we get its reference
                         U = statesStack.first { it.id == U.id }
                     }
+
+                    if (isFinal){
+                        val tks = validValuesFromPointer
+                            .filter { !(it is BruteForceEndNode) && it.followPos.any { follow -> follow is BruteForceEndNode } }
+//                            .distinctBy {
+//                                it.tokenExpression.ident
+//                            }
+                            .sortedByDescending {
+                                it.tokenExpression.weight
+                            }
+                            .map { it.tokenExpression }
+                            .iterator()
+
+
+                        var tk = tks.next()
+                        if (tks.hasNext() && tk.exceptKeywords){
+                            val compare = tks.next()
+                            if (compare.type.isKeyWord() && tk.exceptKeywords && compare._expression.last().toString() == letter){
+                                tk = compare
+                            }
+                        }
+
+                        val current = transitionTokens[pointer.secondaryId]?.get(letter)
+                        if (current == null){
+                            if (!transitionTokens.containsKey(pointer.secondaryId)) transitionTokens[pointer.secondaryId] = hashMapOf()
+                            transitionTokens[pointer.secondaryId]?.set(letter, tk)
+                        }else if (current.weight < tk.weight && (current.type.isKeyWord() && tk.exceptKeywords && current._expression.last().toString() == letter).not()){
+                            transitionTokens[pointer.secondaryId]?.set(letter, tk)
+                        }
+                    }
+
+
                     //If there are no transitions group created we create them
                     if (!newTransitions.containsKey(pointer.secondaryId)) newTransitions[pointer.secondaryId] = hashMapOf()
                     //Set transition
-                    newTransitions[pointer.secondaryId]?.set(letter, U)
+                    newTransitions[pointer.secondaryId]?.set(letter, U.simplified())
+
                 }
             }
             //If there is another in out iterator proceed
@@ -119,15 +175,19 @@ class DirectFromRegex(
         }
             //While there is at least one state market we will continue
         while (statesStack.any { it.marked.not() })
+        val statesSimplified = statesStack.map {
+            it.simplified()
+        }.toMutableList()
         //Set our NFD
         nfd = NFD(
-            states = statesStack,
-            initialState = initialState,
+            states = statesSimplified,
+            initialState = initialState.simplified(),
             transitions = newTransitions,
-            finalStates = finalStates
+            finalStates = finalStates.map { it.simplified() }.toMutableList(),
+            transitionTokens = transitionTokens
         )
 
-        buildGraph(nfd)
+//        buildGraph(nfd)
         return this
     }
 
@@ -155,7 +215,9 @@ class DirectFromRegex(
             }
 
         }
-        val imgFile = File("src/main/kotlin/outputs/direct/${regex}.png")
+        val imgFile = File("src/main/kotlin/outputs/direct/${regexString
+            .replace("/", "")
+            .substring(0, regexString.count() % 10)}.png")
         if (imgFile.exists()){
             imgFile.delete()
             imgFile.createNewFile()
@@ -207,7 +269,7 @@ class DirectFromRegex(
         nfd.states.forEach {
             val rowValues = mutableListOf<String>()
             rowValues.add(it.secondaryId)
-            rowValues.add(it.values.map { it.expression }.joinToString(", "))
+//            rowValues.add(it.values.map { it.expression }.joinToString(", "))
             nfd.alphabet.forEach { alph ->
                 rowValues.add(nfd.transitions[it.secondaryId]?.get(alph)?.secondaryId ?: "")
             }

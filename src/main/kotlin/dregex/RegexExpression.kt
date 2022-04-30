@@ -8,8 +8,10 @@ import de.vandermeer.asciitable.AsciiTable
 import extension.addAllUnique
 import extension.plus
 import graphs.RegexEdge
+import kotlinx.serialization.Serializable
 import org.jgrapht.ext.JGraphXAdapter
 import org.jgrapht.graph.DefaultDirectedGraph
+import tokens.TokenExpression
 import utils.Constants
 import utils.Identifiable
 import java.awt.Color
@@ -22,19 +24,31 @@ object RegexLeafProvider{
     var id2 = 1
 }
 
+
+
 abstract class RegexExpression(
     val expression: String
-) : Identifiable<Int> {
+) : Identifiable<Int>
+{
+
     var left: RegexExpression? = null
+    set(value) {
+        field = value
+    }
+
     var right: RegexExpression? = null
+    set(value) {
+        field = value
+    }
+
     var completed: Boolean = false
     abstract fun setNode(reg: RegexExpression)
     abstract fun setComputedProperties()
 
     var isNullable by Delegates.notNull<Boolean>()
-    var firstPos : MutableList<RegexExpression> = mutableListOf()
-    var lastPos : MutableList<RegexExpression> = mutableListOf()
-    var followPos : MutableList<RegexExpression> = mutableListOf()
+    var firstPos : Set<RegexExpression> = setOf()
+    var lastPos : Set<RegexExpression> = setOf()
+    var followPos : MutableSet<RegexExpression> = mutableSetOf()
 
     val isLeaf: Boolean
     get() = id > -1
@@ -51,7 +65,17 @@ abstract class RegexExpression(
         RegexLeafProvider.id2++
     }
 
+    lateinit var tokenExpression: TokenExpression
+    val inited: Boolean
+    get() = this::tokenExpression.isInitialized
+
     abstract fun accept(regexVisitor: RegexVisitor)
+
+    open fun propagate(tokenExpression: TokenExpression) {
+        this.tokenExpression = tokenExpression
+        left?.propagate(tokenExpression)
+        right?.propagate(tokenExpression)
+    }
 
     fun setToNodeGraph(directedGraph: DefaultDirectedGraph<String, RegexEdge>){
         directedGraph.addVertex("${expression}_$id2")
@@ -109,6 +133,7 @@ abstract class RegexExpression(
 
 }
 
+
 open class WordNode(expression: String) : RegexExpression(expression) {
     init {
         completed = true
@@ -122,8 +147,8 @@ open class WordNode(expression: String) : RegexExpression(expression) {
 
     override fun setComputedProperties() {
         isNullable = expression == Constants.clean
-        firstPos = mutableListOf<RegexExpression>(this)
-        lastPos = mutableListOf(this)
+        firstPos = setOf<RegexExpression>(this)
+        lastPos = setOf(this)
     }
 
 
@@ -132,6 +157,7 @@ open class WordNode(expression: String) : RegexExpression(expression) {
         regexVisitor.visit(this)
     }
 }
+
 
 object SingleOperatorNodeFactory {
     fun create(value: String) : SingleOperatorNode = when(RegexSingleOperators.getFromValue(value)){
@@ -141,18 +167,21 @@ object SingleOperatorNodeFactory {
     }
 }
 
+
+
 class ZeroOrMoreOperatorNode() : SingleOperatorNode("*"){
     override fun setComputedProperties() {
         isNullable = true
         //Set first pos
         left?.setComputedProperties()
 
-        firstPos = left?.firstPos ?: mutableListOf()
-        lastPos = left?.lastPos ?: mutableListOf()
+        firstPos = left?.firstPos ?: mutableSetOf()
+        lastPos = left?.lastPos ?: mutableSetOf()
         //
-        lastPos.forEach { lastPos ->
-            lastPos.followPos.addAllUnique(firstPos)
+        lastPos.forEachIndexed { index, lastPos ->
+            lastPos.followPos.addAll(firstPos)
         }
+
     }
 
     override fun accept(regexVisitor: RegexVisitor) {
@@ -160,16 +189,18 @@ class ZeroOrMoreOperatorNode() : SingleOperatorNode("*"){
         regexVisitor.visit(this)
     }
 }
+
+
 class OneOrMoreOperatorNode() : SingleOperatorNode("+"){
     override fun setComputedProperties() {
         left?.setComputedProperties()
         isNullable = left?.isNullable == true
         //Set the first pos
-        firstPos = left?.firstPos ?: mutableListOf()
-        lastPos = left?.lastPos ?: mutableListOf()
+        firstPos = left?.firstPos ?: mutableSetOf()
+        lastPos = left?.lastPos ?: mutableSetOf()
         //
         lastPos.forEach { lastPos ->
-            lastPos.followPos.addAllUnique(firstPos)
+            lastPos.followPos.addAll(firstPos)
         }
     }
 
@@ -179,15 +210,17 @@ class OneOrMoreOperatorNode() : SingleOperatorNode("+"){
         regexVisitor.visit(this)
     }
 }
+
+
 class ZeroOrOne() : SingleOperatorNode("?"){
     override fun setComputedProperties() {
         isNullable = true
         //Set first pos
         left?.setComputedProperties()
-        firstPos = left?.firstPos ?: mutableListOf()
-        lastPos = left?.lastPos ?: mutableListOf()
+        firstPos = left?.firstPos ?: mutableSetOf()
+        lastPos = left?.lastPos ?: mutableSetOf()
         lastPos.forEach { lastPos ->
-            lastPos.followPos.addAllUnique(firstPos)
+            lastPos.followPos.addAll(firstPos)
         }
     }
 
@@ -197,6 +230,7 @@ class ZeroOrOne() : SingleOperatorNode("?"){
     }
 
 }
+
 
 abstract class SingleOperatorNode(expression: String) : RegexExpression(expression) {
     override fun setNode(reg: RegexExpression) {
@@ -209,6 +243,7 @@ object OperatorNodeFactory {
     fun create(value: String) : OperatorNode = when(RegexOperators.getFromValue(value)){
         RegexOperators.Or -> OrOperatorNode()
         RegexOperators.Concat -> ConcatNode()
+        RegexOperators.TokenOr -> TokenOrOperatorNode()
     }
 }
 
@@ -223,7 +258,9 @@ class BruteForceEndNode() : WordNode("#"){
         RegexLeafProvider.id++
     }
 }
-class OrOperatorNode() : OperatorNode("|"){
+
+
+open class OrOperatorNode(exp: String = "|") : OperatorNode(exp){
 
     override fun setComputedProperties() {
         val left = this.left
@@ -234,7 +271,7 @@ class OrOperatorNode() : OperatorNode("|"){
         right.setComputedProperties()
         isNullable = left.isNullable || right.isNullable
         //Setting first pos
-        firstPos = left.firstPos.plus(right.firstPos)
+        firstPos = left.firstPos + right.firstPos
         //Setting last pos
         lastPos = left.lastPos.plus(right.lastPos)
     }
@@ -246,6 +283,52 @@ class OrOperatorNode() : OperatorNode("|"){
 
 }
 
+
+class TokenOrGenerator(
+    val expressions: List<TokenExpression>,
+    val ignoreList: TokenExpression?
+) {
+    fun generate() : TokenOrOperatorNode {
+        var p1: RegexExpression? = null
+        var p2: RegexExpression? = null
+        lateinit var tokenOrOperatorNode: TokenOrOperatorNode
+        var initilized = false
+        var expressions = expressions
+        ignoreList?.let { expressions = expressions+it }
+        expressions.forEachIndexed { index, regexExpression ->
+            regexExpression.propagate(index)
+            if (p1 == null){
+                p1 = regexExpression.regexExpression
+            }else if (p2 == null){
+                p2 = regexExpression.regexExpression
+                val t = TokenOrOperatorNode().apply {
+                    left = p1
+                    right = p2
+                }
+                initilized = true
+                p1 = t
+                p2 = null
+                tokenOrOperatorNode = t
+            }
+        }
+
+        if (p2 == null && !initilized){
+            val t = TokenOrOperatorNode().apply {
+                left = p1
+                right = p1
+            }
+            tokenOrOperatorNode = t
+        }
+
+        return tokenOrOperatorNode
+    }
+}
+
+
+class TokenOrOperatorNode() : OrOperatorNode("OR")
+
+
+
 abstract class OperatorNode(expression: String) : RegexExpression(expression) {
     override fun setNode(reg: RegexExpression) {
         if (!isLeftInitialized){
@@ -256,6 +339,8 @@ abstract class OperatorNode(expression: String) : RegexExpression(expression) {
         }
     }
 }
+
+
 
 open class ConcatNode(expression: String = Constants.concat) : OperatorNode(expression) {
     override fun setNode(reg: RegexExpression) {
@@ -295,7 +380,7 @@ open class ConcatNode(expression: String = Constants.concat) : OperatorNode(expr
 
 
         left.lastPos.forEach { lastPos ->
-            lastPos.followPos.addAllUnique(right.firstPos)
+            lastPos.followPos.addAll(right.firstPos)
         }
     }
 }

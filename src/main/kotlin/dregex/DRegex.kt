@@ -2,13 +2,13 @@ package dregex
 
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 import com.mxgraph.layout.mxIGraphLayout
-import com.mxgraph.model.mxICell
 import com.mxgraph.util.mxCellRenderer
 import de.vandermeer.asciitable.AsciiTable
 import graphs.RegexEdge
 import org.jgrapht.ext.JGraphXAdapter
 import org.jgrapht.graph.DefaultDirectedGraph
 import utils.Constants
+import utils.Postfixable
 import java.awt.Color
 import java.io.File
 import java.util.*
@@ -23,17 +23,19 @@ import javax.imageio.ImageIO
  * @property singleOperators [List]
  */
 class DRegex(
-    private val regexString: String
-) {
+    val regexString: String
+) : Postfixable<String, String> {
     lateinit var expression : RegexExpression
     private val singleOperators: List<String> = listOf("+", "*", "?")
+
+    private val groupStarters: List<String> = listOf("{", "(", "[")
 
     /**
      * This function is to check the precedence of the operator
      * @param char [String] The operator string
      * @return [Int] the precedence value
      */
-    private fun precedence(char: String): Int {
+    override fun precedence(char: String): Int {
         return when (char) {
             "|" -> 1
             Constants.concat -> return 2
@@ -67,8 +69,8 @@ class DRegex(
      * @param ch [String]
      * @return [Boolean] either it is or not a parenthesis
      */
-    private fun isParenthesis(ch: String): Boolean {
-        return ch == "(" || ch == ")"
+    private fun isGrouper(ch: String): Boolean {
+        return ch == "(" || ch == ")" || ch == "[" || ch == "]" || ch == "{" || ch == "}"
     }
 
 
@@ -102,21 +104,15 @@ class DRegex(
                         //Use the factory to create the operator
                         nodeOp = OperatorNodeFactory.create(letter)
                         if (st.empty()) {
-                            throw Exception("El operador $letter esperaba una expresión a la cual se le pudiera asignar en el lado izquierdo. 👈🏻")
+                            throw Exception("El operador $letter esperaba una expresión a la cual se le pudiera asignar en el lado derecho. 👈🏻")
                         }
                         //Get the right value
                         val right = st.pop()
-//                        if (right is OrOperatorNode){
-//                            throw Exception("El operador $letter no puede recibir ${right.expression} como valor del lado derecho. 👉🏻")
-//                        }
                         if (st.empty()) {
-                            throw Exception("El operador $letter esperaba una expresión a la cual se le pudiera asignar en el lado derecho. 👉🏻")
+                            throw Exception("El operador $letter esperaba una expresión a la cual se le pudiera asignar en el lado izquierdo. 👉🏻")
                         }
                         //Get the left value
                         val left = st.pop()
-//                        if (left is OrOperatorNode){
-//                            throw Exception("El operador $letter no puede recibir ${left.expression} como valor del lado izquierdo. 👈🏻")
-//                        }
                         //We set the left and right child
                         nodeOp.setNode(left)
                         nodeOp.setNode(right)
@@ -126,10 +122,49 @@ class DRegex(
                 st.push(nodeOp)
             } else {
                 //It is just a letter
-                st.push(WordNode(letter))
+                    if (letter.contains("\\")){
+                        letter.replace("\\", "")
+                    }
+                st.push(WordNode(letter.replace("\\", "")))
             }
         }
         return st.pop()
+    }
+
+    fun resolveClosingTag(symbol: String, stack: Stack<String>, result: MutableList<String>) {
+
+        //Stack is empty means the ( was not fund
+        if (stack.isEmpty()) {
+            throw java.lang.Exception("No hubo $symbol encontrado 😞")
+        }
+        while (!stack.isEmpty() &&
+            stack.peek() != symbol
+        ) {
+            result.add(stack.pop())
+        }
+        //After keep searching we dont have a ( to pop it was not even started
+        if (stack.isEmpty()) {
+            throw java.lang.Exception("No hubo $symbol encontrado 😭")
+        }
+        //The parenthesis is empty
+//                    if (openCount == 0){
+//                        throw Exception("El parentesis no puede estar vacio 🔎")
+//                    }
+
+        stack.pop()
+
+    }
+
+    fun resolveElement(element: String, stack: Stack<String>, result: MutableList<String>){
+        //We get the precedence
+        val cPrec = precedence(element)
+        //While stack is not empty and the precedence of the element is lower than the head of the stack
+        //We will pop the value and add it to result
+        while (!stack.isEmpty() && cPrec <= precedence(stack.peek())
+        ) {
+            result.add(stack.pop())
+        }
+        stack.push(element)
     }
 
     /**
@@ -137,54 +172,39 @@ class DRegex(
      * @param exp [List]
      * @return [List] List of postfix expression
      */
-    private fun infixToPostfixList(exp: List<String>): List<String> {
+    override fun infixToPostfixList(exp: List<String>): List<String> {
         val result = mutableListOf<String>()
         val stack = Stack<String>()
+        if (exp.joinToString().contains("()")){
+            throw Exception("El parentesis no puede estar vacio 🔎")
+        }
+
         for (element in exp) {
             when {
-                !isOperator(element) && !isParenthesis(element) -> result.add(element)
-                element == "(" -> stack.push(element)
-                element == ")" -> {
-                    var resultCount = 0
-                    //Stack is empty means the ( was not fund
-                    if (stack.isEmpty()) {
-                        throw java.lang.Exception("No hubo ( encontrado 😞")
-                    }
-                    while (!stack.isEmpty() &&
-                        stack.peek() != "("
-                    ) {
-                        result.add(stack.pop())
-                        resultCount++
-                    }
-                    //After keep searching we dont have a ( to pop it was not even started
-                    if (stack.isEmpty()) {
-                        throw java.lang.Exception("No hubo ( encontrado 😭")
-                    }
-                    //The parenthesis is empty
-                    if (resultCount == 0){
-                        throw Exception("El parentesis no puede estar vacio 🔎")
-                    }
-                    //Pop the (
-                    stack.pop()
+                !isOperator(element) && !isGrouper(element) -> result.add(element)
+                groupStarters.contains(element) -> {
+                    stack.push(element)
+                }
+                element == ")" -> resolveClosingTag("(", stack, result)
+                element == "}" -> {
+                    resolveClosingTag("{", stack, result)
+                    resolveElement("*", stack, result)
+                }
+                element == "]" -> {
+                    resolveClosingTag("[", stack, result)
+                    resolveElement("?", stack, result)
                 }
                 else -> {
-                    //We get the precedence
-                    val cPrec = precedence(element)
-                    //While stack is not empty and the precedence of the element is lower than the head of the stack
-                    //We will pop the value and add it to result
-                    while (!stack.isEmpty() && cPrec <= precedence(stack.peek())
-                    ) {
-                        result.add(stack.pop())
-                    }
-                    stack.push(element)
+                    resolveElement(element, stack, result)
                 }
             }
         }
 
-
         //We finish closing the parenthesis
         while (!stack.isEmpty()) {
             if (stack.peek() == "(") throw Exception("No se cerro parentesis 😤")
+            if (stack.peek() == "{") throw Exception("No se cerro coso { 😤")
+            if (stack.peek() == "[") throw Exception("No se cerro coso [ 😤")
             result.add(stack.pop())
         }
         return result
@@ -198,14 +218,43 @@ class DRegex(
      */
     private fun normalizeStackList(): List<String> {
         val stringsList = mutableListOf<String>()
+        val validFinishArray = listOf(')', '}', ']')
+
+        val regexString = regexString
+        var isEscapingCharFound = false
+        var escapedChar = ""
         regexString.forEachIndexed { index, char ->
-            val validStart = (char == '(' || char == '|').not()
-            val validFinish =
-                if (index < regexString.length - 1) (regexString[index+1] == ')' || isOperator(regexString[index+1])).not() else false
-            stringsList.add(char.toString())
-            if (validStart && validFinish) {
-                stringsList.add(Constants.concat)
+            if (isEscapingCharFound){
+                escapedChar+=char
+                isEscapingCharFound = false
+                stringsList.add("\\$char")
+                val validFinish = if (index < regexString.length - 1) {
+                    (validFinishArray.contains(regexString[index + 1])  || isOperator(regexString[index + 1])).not()
+                }
+                else {
+                    false
+                }
+                if (validFinish) {
+                    stringsList.add(Constants.concat)
+                }
             }
+            else if (char == '\\'){
+                isEscapingCharFound = true
+            }else{
+                val validStart = (char == '(' || char == '|' || char == '{' || char == '[').not()
+                val validFinish = if (index < regexString.length - 1) {
+                    (validFinishArray.contains(regexString[index + 1])  || isOperator(regexString[index + 1])).not()
+                }
+                else {
+                    false
+                }
+
+                stringsList.add(char.toString())
+                if (validStart && validFinish) {
+                    stringsList.add(Constants.concat)
+                }
+            }
+
         }
 
         return infixToPostfixList(stringsList)
@@ -218,7 +267,7 @@ class DRegex(
      */
     fun build() : RegexExpression {
         expression = expressionTreeList(normalizeStackList())
-        buildGraph()
+//        buildGraph()
         return expression
     }
 

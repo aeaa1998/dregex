@@ -43,14 +43,22 @@ class NFA<StateImpl: State>(
 
 
     //This is the recursive call
-    fun eClosure(state: StateImpl, states: List<StateImpl> = listOf()) : List<StateImpl> {
-        val eClosureStatesList: MutableList<StateImpl> = mutableListOf(state)
+    fun eClosure(states: List<StateImpl> = listOf()) : List<StateImpl> {
+        val eClosureStatesList: MutableList<StateImpl> = mutableListOf<StateImpl>().apply {
+            addAll(states)
+        }
 
-        val possibleStates = (transitions[state.id]?.get(Constants.clean) ?: listOf())
-                //Only the ones we dont have
+
+
+        val possibleStates = mutableListOf<StateImpl>()
+        states.forEach { state ->
+            val nestedPossible = (transitions[state.id]?.get(Constants.clean) ?: listOf())
+            //Only the ones we dont have
             .filter{
                 !states.contains(it)
             }
+            possibleStates.addAllUnique(nestedPossible)
+        }
 
         return if (possibleStates.isEmpty()) {
             //We will stop returning states when there are not
@@ -59,7 +67,8 @@ class NFA<StateImpl: State>(
             //Add all unique
             possibleStates.forEach { possibleState ->
                 eClosureStatesList.addUnique(possibleState)
-                val nestedPossible = eClosure(possibleState, eClosureStatesList + states)
+//                val nestedPossible = eClosure(possibleState, eClosureStatesList + states)
+                val nestedPossible = eClosure(eClosureStatesList + states)
                 eClosureStatesList.addAllUnique(nestedPossible)
             }
             eClosureStatesList.addAllUnique(possibleStates)
@@ -70,13 +79,13 @@ class NFA<StateImpl: State>(
 
     }
 
-    fun eClosure(states: List<StateImpl>) : List<StateImpl> {
-        val eClosureStatesList: MutableList<StateImpl> = mutableListOf()
-        eClosureStatesList.addAllUnique(states)
-        eClosureStatesList.addAllUnique(states.map(this::eClosure).flatten())
-
-        return eClosureStatesList
-    }
+//    fun eClosure(states: List<StateImpl>) : List<StateImpl> {
+//        val eClosureStatesList: MutableList<StateImpl> = mutableListOf()
+//        eClosureStatesList.addAllUnique(states)
+//        eClosureStatesList.addAllUnique(states.map(this::eClosure).flatten())
+//
+//        return eClosureStatesList
+//    }
 
     override fun simulate(value:String) : Boolean {
         value.forEachIndexed { index, c ->
@@ -84,9 +93,7 @@ class NFA<StateImpl: State>(
             val newStates = mutableListOf<StateImpl>()
             eClosure(currentState).forEach { currentState ->
                 val nextForState = eClosure(transitions[currentState.id]?.get(letter) ?: listOf())
-
                 newStates.addAllUnique(nextForState)
-
             }
             //If it is empty and value is not the last char
             if (newStates.isEmpty() && index != value.count()){

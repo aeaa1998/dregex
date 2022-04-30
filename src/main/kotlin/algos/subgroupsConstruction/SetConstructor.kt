@@ -41,7 +41,7 @@ class SetConstructor(
         //Get the alphabet all the possible values excluding clean
         val alphabet = nfa.alphabet.filter { it != Constants.clean }
         //Our initial state of the nfa apply e closure to get all the current states
-        val initialState = SetConstructorState(nfa.eClosure(nfa.initialState))
+        val initialState = SetConstructorState(nfa.eClosure(listOf(nfa.initialState)))
 
         //Initialize our stack
         val statesStack = mutableListOf(initialState)
@@ -60,6 +60,7 @@ class SetConstructor(
             val pointer = statesStack[pointerIndex]
             pointer.marked = true
             for (transitionLetter in alphabet){
+
                 //We create U with the states by applying the transition letter and then e closure
                 var U = SetConstructorState(nfa.eClosure(
                     nfa.move(pointer.values, transitionLetter)
