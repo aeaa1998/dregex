@@ -134,6 +134,9 @@ class DirectFromRegex(
 //                            .distinctBy {
 //                                it.tokenExpression.ident
 //                            }
+                            .distinctBy {
+                                it.tokenExpression.ident
+                            }
                             .sortedByDescending {
                                 it.tokenExpression.weight
                             }
