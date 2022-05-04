@@ -145,6 +145,15 @@ class DirectFromRegex(
 
 
                         var tk = tks.next()
+//                        var check = tk
+//                        while (tks.hasNext() && check.exceptKeywords){
+//                            val compare = tks.next()
+//                            if (compare.type.isKeyWord() && check.exceptKeywords && compare._expression.last().toString() == letter){
+//                                tk = compare
+//                            }
+//                            check = compare
+//                        }
+
                         if (tks.hasNext() && tk.exceptKeywords){
                             val compare = tks.next()
                             if (compare.type.isKeyWord() && tk.exceptKeywords && compare._expression.last().toString() == letter){
@@ -280,14 +289,6 @@ class DirectFromRegex(
             at.addRule()
         }
         println(at.render())
-    }
-
-    private fun isOperator(ch: String): Boolean {
-        return ch == Constants.concat || ch == "|" || ch == "?" || ch == "*" || ch == "+"
-    }
-
-    private fun isParenthesis(ch: String): Boolean {
-        return ch == "(" || ch == ")"
     }
 
 }
