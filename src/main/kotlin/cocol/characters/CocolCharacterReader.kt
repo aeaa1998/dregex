@@ -3,17 +3,16 @@ package cocol.characters
 import cocol.CocolOperatorClass
 import cocol.StringNormalizer
 import cocol.anyCharSet
-import cocol.assignKeyWord
 import tokens.CoCoBoiCharacterSet
-import tokens.TokenMatches
+import tokens.TokenMatch
 import utils.CocolLangIdents
 import utils.Postfixable
 import java.lang.Exception
 import java.util.*
 
 class CocolCharacterReader(
-    private val tokensSearchIterator: MutableIterator<TokenMatches>,
-    private val identToken: TokenMatches,
+    private val tokensSearchIterator: MutableIterator<TokenMatch>,
+    private val identToken: TokenMatch,
     private val characters: List<CoCoBoiCharacterSet>
 ) : Postfixable<Pair<String, String>, String> {
     fun read(): CoCoBoiCharacterSet {
@@ -82,12 +81,17 @@ class CocolCharacterReader(
     }
 
     private fun getCharsValue(): MutableList<Pair<String, String>> {
-        if (identToken.token.ident.toLowerCase() != "ident"){
+        if (identToken.token.ident.lowercase() != CocolLangIdents.Ident.ident){
             throw Exception("La declaración deberia empezar con un ident")
         }
         if (tokensSearchIterator.hasNext().not()) throw Exception("Asignación esperada")
-        val assign = tokensSearchIterator.next()
-        if(assign.token.ident.toLowerCase() != assignKeyWord.ident)
+        var _tt = tokensSearchIterator.next()
+        //Ignore idents
+        while (_tt.token.ident == CocolLangIdents.WhiteSpace.ident && tokensSearchIterator.hasNext()){
+            _tt = tokensSearchIterator.next()
+        }
+        val assign = _tt
+        if(assign.token.ident.lowercase() != CocolLangIdents.Assign.ident)
             throw Exception("Se esperaba '=' despues de la declaracion del ident se recibio : ${assign.token.ident}")
 
         var declarationCompleted = false
@@ -97,7 +101,10 @@ class CocolCharacterReader(
 
             val tokenMatch = tokensSearchIterator.next()
             when(tokenMatch.token.ident){
-                "ident" -> {
+                CocolLangIdents.WhiteSpace.ident -> {
+                    continue
+                }
+                CocolLangIdents.Ident.ident -> {
                     val charSet = characters.firstOrNull { it.ident ==  tokenMatch.match}
                     requireNotNull(charSet){
                         "No se ha declarado ${tokenMatch.match} antes de utilizarlo"
@@ -105,7 +112,7 @@ class CocolCharacterReader(
                     //Join the strings of the charset
                     charValue.add(Pair(tokenMatch.token.ident, charSet.value.joinToString("")))
                 }
-                "operator" -> {
+                CocolLangIdents.Operator.ident -> {
                     val operator = tokenMatch.match
                     val operatorCocol = CocolOperatorClass.fromString(operator)
                     val validOperators = listOf(CocolOperatorClass.Minus, CocolOperatorClass.Plus, CocolOperatorClass.Finish, CocolOperatorClass.Range)
@@ -119,20 +126,18 @@ class CocolCharacterReader(
                     }
 
                 }
-                "string" -> {
+                CocolLangIdents.StringIdent.ident -> {
                     val char = tokenMatch.match
-//                    charValue.add(Pair(tokenMatch.token.ident, Constants.kotlinScriptManger.eval(char).toString()))
                     val charNormalized = CocolTextValueGetter(char).get()
                     charValue.add(Pair(tokenMatch.token.ident, StringNormalizer(charNormalized).normalize()))
                 }
-                "any" -> {
+                CocolLangIdents.Any.ident -> {
                     //We just found ANY we ,ust set all posible chars
                     charValue.add(Pair("string", anyCharSet))
                 }
                 CocolLangIdents.Character.ident -> {
                     val char = tokenMatch.match
                     val charNormalized = CocolTextValueGetter(char).get()
-//                    charValue.add(Pair(tokenMatch.token.ident, Constants.kotlinScriptManger.eval(char).toString()))
                     charValue.add(Pair(tokenMatch.token.ident, StringNormalizer(charNormalized).normalize()))
                 }
                 else -> {

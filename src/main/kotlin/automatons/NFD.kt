@@ -1,11 +1,9 @@
 package automatons
 
 import extension.addAllUnique
-import extension.addUnique
 import extension.containsId
 import kotlinx.serialization.Serializable
 import tokens.TokenExpression
-import java.util.*
 import kotlin.collections.HashMap
 
 @Serializable
@@ -18,7 +16,6 @@ open class NFD<StateImpl: State>(
 ) : Automaton<StateImpl, StateImpl> {
 
     //Compute the alphabet when its needed we know its all the unique transition keys for each
-    //state
     override val alphabet: List<String> by lazy {
         val alph = mutableListOf<String>()
         transitions.forEach { (_, u) -> alph.addAllUnique(u.keys) }

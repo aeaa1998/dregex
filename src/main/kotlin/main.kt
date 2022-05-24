@@ -1,25 +1,9 @@
-import algos.direct.DirectFromRegex
-import algos.direct.DirectFromRegexState
-import algos.direct.DirectFromRegexTokenDetector
-import algos.direct.DirectRegexSimplified
-import algos.subgroupsConstruction.SetConstructor
-import algos.subgroupsConstruction.SetConstructorState
-import algos.thompson.Thompson
-import automatons.NFA
-import automatons.NFD
-import automatons.State
 import cocol.*
-import de.vandermeer.asciitable.AsciiTable
-import dregex.DRegex
-import dregex.RegexExpression
-import extension.getSelectedOption
 import extension.requiredInput
-import tokens.TokenExpression
 import java.io.File
 import java.nio.file.Paths
 
 import java.util.*
-import javax.script.ScriptEngineManager
 
 fun main() {
     var fileExists = false
@@ -37,13 +21,12 @@ fun main() {
         }
     }
     try {
-        CocolReader(
-            cocoNFD = AugustoCocol.augustoNFD,
-            file
-        ).read()
+        //ZERO OR MORE IS A WHILE (any of the tokens)
+            CocolScanner.read(cocoNFD = AugustoCocol.augustoNFD, file)
     }catch (e: Exception){
         println("Se encontro el siguiente error: ")
         println(e.localizedMessage)
+        e.printStackTrace()
     }
 
 

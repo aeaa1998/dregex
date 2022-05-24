@@ -81,7 +81,6 @@ class DRegex(
      */
     private fun expressionTreeList(postfix: List<String>): RegexExpression {
         val st: Stack<RegexExpression> = Stack<RegexExpression>()
-
         //We iterate
         for (i in postfix.indices) {
             //Get the lleter
@@ -202,7 +201,9 @@ class DRegex(
 
         //We finish closing the parenthesis
         while (!stack.isEmpty()) {
-            if (stack.peek() == "(") throw Exception("No se cerro parentesis 😤")
+            if (stack.peek() == "(") {
+                throw Exception("No se cerro parentesis 😤")
+            }
             if (stack.peek() == "{") throw Exception("No se cerro coso { 😤")
             if (stack.peek() == "[") throw Exception("No se cerro coso [ 😤")
             result.add(stack.pop())

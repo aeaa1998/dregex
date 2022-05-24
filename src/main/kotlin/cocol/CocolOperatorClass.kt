@@ -29,7 +29,7 @@ enum class CocolOperatorClass {
         }
 
         fun fromString(value: String): CocolOperatorClass{
-            return when(value.toLowerCase()){
+            return when(value.lowercase()){
                 "-" -> Minus
                 "+" -> Plus
                 "|" -> Or

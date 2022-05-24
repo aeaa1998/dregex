@@ -1,19 +1,21 @@
 COMPILER MyCOCOR
-(.//Especificacion de Funciones.)
+
 CHARACTERS
 
-letter= "ABCDEFGHIJKLMN—OPQRSTUVWXYZabcdefghijklmnÒopqrstuvwxyz".
+letter= "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".
 digit= "0123456789".
 
 cr = CHR(13).
 lf = CHR(10).
 tab = CHR(9).
-ignore = cr+lf+tab.
+ignore = cr+lf+tab+CHR(32).
 comillas = CHR(34).
 stringletter = ANY-comillas-ignore.
 
 operadores ="+-=()[]{}|.<>".
 MyANY = ANY-operadores.
+
+IGNORE ignore.
 
 TOKENS
 
@@ -28,9 +30,253 @@ nontoken = MyANY.
 startcode ="(.".
 endcode=".)".
 
-operador=operadores.
+PRODUCTIONS
 
-IGNORE ignore.
+MyCOCOR= 				(.val compilerName = Composition<String>("");
+					  val endName = Composition<String>("");.)
+	"COMPILER"
+	Ident<compilerName>		(.println("Nombre inicial del compilador ${compilerName.value}");.)
+	[Codigo]
+	Body
+	"END" Ident<endName>	(.println("Nombre Final del Compilador: ${endName.value}");.)
+.
+
+Body =
+	Characters
+	[IgnoreCase]
+	[Keywords]
+	Tokens
+	Productions
+.
+
+IgnoreCase =
+"IGNORE" (.val identName = Composition<String>(""); val stringValue = Composition<String>("");
+val identName2 = Composition<String>(""); val stringValue2 = Composition<String>("");
+.)
+(
+    Ident<identName>	(.println("Encontrado ident para ignorar ${identName.value}");.)
+    |
+    Char
+    |
+    String<stringValue> (.println("Encontrado string para ignorar ${stringValue.value}");.)
+)
+{
+     Ident<identName2>	(.println("Encontrado ident para ignorar ${identName.value}");.)
+    |
+    Char
+    |
+    String<stringValue2> (.println("Encontrado string para ignorar ${stringValue.value}");.)
+}
+".".
+
+Characters =				(.val charName = Composition<String>("");
+					   val counter = Composition<Int>(0);.)
+
+	"CHARACTERS"			(.println("LEYENDO CHARACTERS");.)
+	{
+		Ident<charName>	(.counter.value++;println("Char Set ${counter.value}: ${charName.value}");.)
+		"="
+		CharSet
+		{
+			"+"CharSet
+			|
+			"-"CharSet
+		}
+		"."
+	}
+.
+
+Keywords = 				(.val keyName = Composition<String>("");
+					  val stringValue = Composition<String>("");
+    					  val counter = Composition<Int>(0);.)
+
+	"KEYWORDS"			(.println("LEYENDO KEYWORDS");.)
+	{
+
+		Ident<keyName>	(.counter.value++;println("KeyWord ${counter.value}: ${keyName.value}");.)
+		"="
+		String<stringValue>
+		"."
+
+	}
+
+.
+
+
+Tokens =				(.val tokenName = Composition<String>("");
+					  val counter = Composition<Int>(0);.)
+
+	"TOKENS"			(.println("LEYENDO TOKENS");.)
+	{
+		Ident<tokenName>	(.counter.value++;println("Token ${counter.value}: ${tokenName.value}");.)
+		"="
+		TokenExpr
+		[ExceptKeyword]
+		"."
+
+	}
+
+.
+
+
+Productions = 				(.val counter = Composition<Int>(0);.)
+
+	"PRODUCTIONS"			(.val prodName = Composition<String>("");
+					  println("LEYENDO PRODUCTIONS");.)
+	{
+		Ident<prodName>	(.counter.value++;println("Production ${counter.value}: ${prodName.value}");.)
+		[Atributos]
+		"="
+		[Codigo]
+		ProductionExpr
+		"."
+
+	}
+.
+
+ExceptKeyword=
+	"EXCEPT"
+	"KEYWORDS"
+.
+
+
+ProductionExpr =
+	ProdTerm
+	{
+	"|"
+	ProdTerm
+	}
+.
+
+ProdTerm =
+	ProdFactor
+	{
+	ProdFactor
+	}
+.
+
+ProdFactor =
+	(
+	SymbolProd
+	|
+	"("ProductionExpr")"
+	|
+	"["ProductionExpr"]"
+	|
+	"{"ProductionExpr"}"
+	)
+	[Codigo]
+.
+
+
+
+SymbolProd =			(.val sV = Composition<String>("");
+				  val IN = Composition<String>("");.)
+	(
+	String<sV>		(.println("String en Production: ${sV.value}");.)
+	|
+	char
+	|
+	"ANY"
+	|
+	Ident<IN>		(.println("Identificador en Production: ${IN.value}");.)
+	[Atributos]
+	)
+.
+
+Codigo =
+	startcode
+	{ ANY }
+	endcode
+.
+
+Atributos =
+	"<"
+	{ Generico | ANY}
+	">"
+.
+
+Generico =
+	"<"
+	{ANY}
+	">"
+.
+
+
+
+TokenExpr=
+	TokenTerm
+	{
+	"|"
+	TokenTerm
+	}
+.
+
+TokenTerm=
+	TokenFactor
+	{
+	TokenFactor
+	}
+.
+
+TokenFactor=
+	(
+	SimbolToken
+	|
+	"("TokenExpr")"
+	|
+	"["TokenExpr"]"
+	|
+	"{"TokenExpr"}"
+	)
+.
+
+SimbolToken =			(.val IdentName = Composition<String>("");
+				  val StringValue = Composition<String>("");.)
+	(
+	String<StringValue>
+	|
+	char
+	|
+	Ident<IdentName>	(.println("Identificador en Token: ${IdentName.value}");.)
+	)
+.
+
+
+
+CharSet= 			(.val IdentName = Composition<String>("");
+				  val StringValue = Composition<String>("");.)
+	(
+	String<StringValue>
+	|
+	Char
+	|
+	"ANY"
+	|
+	Ident<IdentName>	(.println("Identificador en CharSet: ${IdentName.value}");.)
+	)
+
+.
+
+
+Char=
+	(
+	char
+	|
+	charnumber
+	|
+	charinterval
+	)
+.
+
+
+String<sFound: Composition<String>>=
+	string		(.sFound.value = currentToken.match;.)
+.
+
+Ident<sFound: Composition<String>>=
+	ident		(.sFound.value = currentToken.match;.)
+.
 
 
 END MyCOCOR

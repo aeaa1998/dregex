@@ -3,15 +3,16 @@ package tokens
 import dregex.DRegex
 import dregex.RegexExpression
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import java.util.*
 
 @Serializable
 class TokenExpression(
     val ident: String,
-    val _expression: String,
+    @Transient
+    val _expression: String = "",
     val type: TokenExpressionType = TokenExpressionType.Normal
 ) {
-
     var exceptKeywords = false
     val regexExpression: RegexExpression by lazy { DRegex(_expression).build() }
     var weight = 0
@@ -33,4 +34,3 @@ class TokenExpression(
         regexExpression.propagate(this)
     }
 }
-//Analisis sintactivo por descensso recursivo

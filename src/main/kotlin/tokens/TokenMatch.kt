@@ -1,6 +1,6 @@
 package tokens
 
-class TokenMatches(
+class TokenMatch(
     val match: String,
     val token: TokenExpression
 ){

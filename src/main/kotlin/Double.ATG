@@ -1,20 +1,11 @@
 COMPILER Double    
-	
-(.
-			/*--------------Scanner Especification----------*/
-.)
 
-CHARACTERS 
+CHARACTERS
 
-digit = "0123456789" .
-tab = CHR(9).
-eol = CHR(10).
-blanco = eol+CHR(13)+tab+' '.
-
-KEYWORDS
-
-while = "while".
-do = "do".
+digit="0123456789".
+tab=CHR(9).
+eol=CHR(10).
+blanco=eol+CHR(13)+tab + CHR(32).
 
 TOKENS
 
@@ -22,5 +13,39 @@ number = digit{digit}.
 decnumber = digit{digit}"."digit{digit}.
 white = blanco{blanco}.
 
+PRODUCTIONS
 
+Expr= {Stat ";"{white}}{white}".".
+
+Stat = 							(.val comp=Composition<Double>(0.0);.)
+	Expression<comp>		(.println("Resultado: ${comp.value}");.)
+	.
+
+Expression<result: Composition<Double>> =			(.val result1=Composition<Double>(0.0); val result2=Composition<Double>(0.0);.)
+	Term<result1>
+	{    "+"Term<result2>		(.result1.value+=result2.value;.)
+	   | "-"Term<result2>		(.result1.value-=result2.value;.)
+	}								(.result.value=result1.value;.)
+	.
+
+Term<result: Composition<Double>>=				(.val result1=Composition<Double>(0.0); val result2=Composition<Double>(0.0);.)
+	Factor<result1>
+	{    "*"Factor<result2>	(.result1.value*=result2.value;.)
+	   | "/"Factor<result2>	(.result1.value/=result2.value;.)
+	}							(.result.value=result1.value;.)
+	.
+
+
+Factor<result: Composition<Double>> =		(.val sign = Composition<Double>(1.0);.)
+	["-"						(.sign.value = -1.0;.)
+	]
+	(Number<result>
+	 |"("Expression<result>")"
+	)							(.result.value*=sign.value;.)
+	.
+
+Number<result: Composition<Double>> =
+	(number
+	|decnumber)(.result.value = currentToken.match.toDouble();.)
+	.
 END Double

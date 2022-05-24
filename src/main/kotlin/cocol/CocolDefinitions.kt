@@ -1,11 +1,7 @@
 package cocol
 
 import algos.direct.DirectFromRegexNfdBuilder
-import algos.direct.DirectFromRegexState
-import algos.direct.DirectFromRegexTokenDetector
-import algos.direct.DirectRegexSimplified
-import automatons.NFD
-import kotlinx.serialization.encodeToString
+import automatons.serizalers.NFDSerializer
 import kotlinx.serialization.json.Json
 import tokens.CoCoBoiCharacterSet
 import tokens.TokenExpression
@@ -26,8 +22,29 @@ val digit = CoCoBoiCharacterSet("digit", "0123456789".toCharArray().map { it.toS
 val whiteSpaces = TokenExpression(
     "whitespace",
     "${32.toChar()}|${ 9.toChar() }|${ 11.toChar() }| |\n|${13.toChar()}",
-    TokenExpressionType.Ignore
+//    TokenExpressionType.Ignore
 )
+
+val actionParameterStart = TokenExpression(
+    CocolLangIdents.ActionParamBlockStart.ident,
+    "<"
+)
+val actionParameterEnd = TokenExpression(
+    CocolLangIdents.ActionParamBlockEnd.ident,
+    ">"
+)
+
+val actionBlock = TokenExpression(
+    CocolLangIdents.SemanticRule.ident,
+    "(\\(\\.)|(.\\))"
+)
+
+val wildCard = TokenExpression(
+    CocolLangIdents.WildCard.ident,
+    anyCharSet.map { "\\${it}" }.joinToString("|")
+).apply {
+    this.exceptKeywords = true
+}
 
 val ignoreKeyWord = TokenExpression(
     "ignore",
@@ -35,15 +52,21 @@ val ignoreKeyWord = TokenExpression(
     TokenExpressionType.Keyword
 )
 
-val charactersKeyWord = TokenExpression(
-    "characters",
-    "CHARACTERS",
+val productionsKeyWord = TokenExpression(
+    CocolLangIdents.Productions.ident,
+    "PRODUCTIONS",
     TokenExpressionType.Keyword
 )
 
 val tokensKeyWord = TokenExpression(
     "tokens",
     "TOKENS",
+    TokenExpressionType.Keyword
+)
+
+val charactersKeyWord = TokenExpression(
+    CocolLangIdents.CharactersScope.ident,
+    "CHARACTERS",
     TokenExpressionType.Keyword
 )
 
@@ -66,21 +89,21 @@ val keyKeyWord = TokenExpression(
 )
 
 val assignKeyWord = TokenExpression(
-    "assign",
+    CocolLangIdents.Assign.ident,
     "=",
     TokenExpressionType.Keyword
 )
 
 val operatorKeyWord = TokenExpression(
-    "operator",
+    CocolLangIdents.Operator.ident,
     "\\-|\\+|\\||(EXCEPT KEYWORDS)|.|(..)",
-    TokenExpressionType.Keyword
+//    TokenExpressionType.Keyword
 )
 
 val grouperKeyWord = TokenExpression(
-    "grouper",
+    CocolLangIdents.Grouper.ident,
     "\\{|\\}|\\(|\\)|\\[|\\]",
-    TokenExpressionType.Keyword
+//    TokenExpressionType.Keyword
 )
 
 val charToken = TokenExpression(
@@ -101,19 +124,19 @@ val charToken = TokenExpression(
 
 val comment = TokenExpression(
     "comment",
-    "\\(\\.{${extendedAscii
-        .filter { it != '.' && it != ')'}
+    "\\\\\\*{${extendedAscii
+        .filter { it != '*'}
         .map {
             if (regexKeys.contains(it)){
                 return@map "\\${it.toString()}"
             }
             it.toString()
         }
-        .joinToString("|")}}\\.\\)"
+        .joinToString("|")}}\\*\\\\"
 )
 
 val string = TokenExpression(
-    "string",
+    CocolLangIdents.StringIdent.ident,
     "\\\"{${extendedAscii
         .filter { it != '"' }
         .map {
@@ -131,51 +154,54 @@ val number = TokenExpression(
 )
 
 val ident = TokenExpression(
-    "ident",
+    CocolLangIdents.Ident.ident,
     "(${letter.generateRepresentation()}){(${letter.generateRepresentation()})|(${digit.generateRepresentation()})|\\_}"
 ).apply {
     this.exceptKeywords = true
 }
 
 val any = TokenExpression(
-    "any",
+    CocolLangIdents.Any.ident,
     "ANY"
 )
 
 val tokens = listOf(
+    wildCard,
+    whiteSpaces,
     string,
     number,
     ident,
     charToken,
-//    commentStart,
     comment,
-    any
+    actionParameterStart,
+    actionParameterEnd,
+    actionBlock,
+    any,
+    operatorKeyWord,
+    grouperKeyWord
 )
 
 val keywords = listOf(
-    grouperKeyWord,
     charactersKeyWord,
     tokensKeyWord,
     compilerKeyWord,
     endKeyWord,
     assignKeyWord,
-    operatorKeyWord,
     keyKeyWord,
     ignoreKeyWord,
+    productionsKeyWord
 )
 
-val ignore = listOf(
-    whiteSpaces
-)
+//val ignore = whiteSpaces
 
-fun generateCocolDefinition() {
+private fun generateCocolDefinition() {
     val nfdBuilder = DirectFromRegexNfdBuilder(
         tokens,
         keywords,
-        ignore[0]
+        null
     )
     val nfd = nfdBuilder.buildNfd()
-    val result = Json.encodeToString(nfd)
+    val result = Json.encodeToString(serializer = NFDSerializer(), nfd)
     val absPath = Paths.get("").toAbsolutePath().toAbsolutePath()
     val basePath = "$absPath/src/main/kotlin"
     val templateFile = File("$basePath/AugustoCocol")

@@ -178,7 +178,7 @@ class ZeroOrMoreOperatorNode() : SingleOperatorNode("*"){
         firstPos = left?.firstPos ?: mutableSetOf()
         lastPos = left?.lastPos ?: mutableSetOf()
         //
-        lastPos.forEachIndexed { index, lastPos ->
+        lastPos.forEach { lastPos ->
             lastPos.followPos.addAll(firstPos)
         }
 

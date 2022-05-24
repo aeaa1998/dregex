@@ -1,11 +1,13 @@
 package cocol
 
+import utils.CocolLangIdents
+
 /**
  * This enum tells in which scope the reader is currently at
  * it can bee consumed just once
  */
 enum class CocolReaderScope {
-    None, Characters, Tokens, Keywords, Ignore;
+    None, Characters, Tokens, Keywords, Ignore, Productions;
     //Tells if it has been consumed
     var consumed = false
 
@@ -16,6 +18,7 @@ enum class CocolReaderScope {
         Characters -> true
         Tokens -> true
         Keywords -> true
+        Productions -> true
     }
 
     //Get the order of each
@@ -26,6 +29,7 @@ enum class CocolReaderScope {
         Characters -> 3
         Keywords -> 4
         Tokens -> 5
+        Productions -> 6
 
     }
 
@@ -34,10 +38,11 @@ enum class CocolReaderScope {
             "ignore" to Ignore,
             "characters" to Characters,
             "keywords" to Keywords,
-            "tokens" to Tokens
+            "tokens" to Tokens,
+            CocolLangIdents.Productions.ident to Productions
         )
         fun getScopeFromIdent(ident: String): CocolReaderScope {
-            return allIdents[ident.toLowerCase()] ?: None
+            return allIdents[ident.lowercase()] ?: None
         }
     }
 

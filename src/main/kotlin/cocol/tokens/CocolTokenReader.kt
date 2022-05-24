@@ -2,25 +2,17 @@ package cocol.tokens
 
 import cocol.CocolOperatorClass
 import cocol.StringNormalizer
-import cocol.assignKeyWord
 import cocol.characters.CocolTextValueGetter
-import dregex.OperatorNodeFactory
-import dregex.RegexExpression
-import dregex.SingleOperatorNodeFactory
-import dregex.WordNode
 import tokens.CoCoBoiCharacterSet
 import tokens.TokenExpression
 import tokens.TokenExpressionType
-import tokens.TokenMatches
+import tokens.TokenMatch
 import utils.CocolLangIdents
-import utils.Constants
-import utils.Postfixable
 import java.lang.Exception
-import java.util.*
 
 class CocolTokenReader(
-    private val tokensSearchIterator: MutableIterator<TokenMatches>,
-    private val identToken: TokenMatches,
+    private val tokensSearchIterator: MutableIterator<TokenMatch>,
+    private val identToken: TokenMatch,
     private val characters: List<CoCoBoiCharacterSet>,
     private val tokens: List<TokenExpression>
 )  {
@@ -37,12 +29,18 @@ class CocolTokenReader(
     }
 
     private fun getCharsValue(): MutableList<Pair<String, String>> {
-        if (identToken.token.ident.toLowerCase() != "ident"){
+        if (identToken.token.ident.lowercase() != CocolLangIdents.Ident.ident){
             throw Exception("La declaración deberia empezar con un ident")
         }
         if (tokensSearchIterator.hasNext().not()) throw Exception("Asignación esperada")
-        val assign = tokensSearchIterator.next()
-        if(assign.token.ident.toLowerCase() != assignKeyWord.ident)
+        var _tt = tokensSearchIterator.next()
+        //Ignore idents
+        while (_tt.token.ident == CocolLangIdents.WhiteSpace.ident && tokensSearchIterator.hasNext()){
+            _tt = tokensSearchIterator.next()
+        }
+        val assign = _tt
+
+        if(assign.token.ident.lowercase() != CocolLangIdents.Assign.ident)
             throw Exception("Se esperaba '=' despues de la declaracion del ident se recibio : ${assign.token.ident}")
 
         var declarationCompleted = false
@@ -52,7 +50,10 @@ class CocolTokenReader(
 
             val tokenMatch = tokensSearchIterator.next()
             when(tokenMatch.token.ident){
-                "ident" -> {
+                CocolLangIdents.WhiteSpace.ident -> {
+                    continue
+                }
+                CocolLangIdents.Ident.ident -> {
                     //First we search on the characters
                     val charSet = characters.firstOrNull { it.ident ==  tokenMatch.match}
                     if (charSet != null){
@@ -68,7 +69,7 @@ class CocolTokenReader(
                     }
                 }
 
-                "operator" -> {
+                CocolLangIdents.Operator.ident -> {
                     val operator = tokenMatch.match
                     val operatorCocol = CocolOperatorClass.fromString(operator)
                     val validOperators = listOf(CocolOperatorClass.Or, CocolOperatorClass.Finish, CocolOperatorClass.Except)
@@ -104,15 +105,12 @@ class CocolTokenReader(
                         )
                     )
                 }
-                "string" -> {
+                CocolLangIdents.StringIdent.ident -> {
                     val char = tokenMatch.match
                     val charNormalized = CocolTextValueGetter(char).get()
                     charValue.add(
                         Pair(
                             tokenMatch.token.ident,
-//                            Constants.kotlinScriptManger.eval(char).toString().map {
-//                                "\\$it"
-//                            }.joinToString("")
                             "(${StringNormalizer(charNormalized).normalize().toString().map {
                                 "\\$it"
                             }.joinToString("")})"
@@ -129,9 +127,6 @@ class CocolTokenReader(
                             "(${StringNormalizer(charNormalized).normalize().toString().map {
                                 "\\$it"
                             }.joinToString("")})"
-//                            Constants.kotlinScriptManger.eval(char).toString().map {
-//                                "\\$it"
-//                            }.joinToString("")
                         )
                     )
                 }

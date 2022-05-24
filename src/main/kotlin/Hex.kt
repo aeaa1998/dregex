@@ -2,7 +2,6 @@ import algos.direct.DirectFromRegexNfdBuilder
 import algos.direct.DirectFromRegexTokenDetector
 import algos.direct.DirectRegexSimplified
 import automatons.NFD
-import cocol.ignore
 import cocol.keywords
 import cocol.tokens
 import extension.requiredInput

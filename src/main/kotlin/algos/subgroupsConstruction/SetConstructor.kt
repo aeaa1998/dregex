@@ -8,7 +8,6 @@ import com.mxgraph.layout.mxIGraphLayout
 import com.mxgraph.model.mxICell
 import com.mxgraph.util.mxCellRenderer
 import de.vandermeer.asciitable.AsciiTable
-import dregex.DirectRegex
 import extension.containsAnyId
 import extension.containsId
 import graphs.RegexEdge

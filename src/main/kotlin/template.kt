@@ -1,15 +1,13 @@
-import algos.direct.DirectFromRegexNfdBuilder
+
 import algos.direct.DirectFromRegexTokenDetector
 import algos.direct.DirectRegexSimplified
 import automatons.NFD
-import cocol.ignore
-import cocol.keywords
-import cocol.tokens
+import automatons.serizalers.NFDSerializer
+//import cocol.productions.template.PARSER
+
 import extension.requiredInput
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import tokens.TokenExpression
+
 import java.io.File
 import java.nio.file.Paths
 
@@ -30,18 +28,21 @@ fun main(args: Array<String>){
         }
     }
 
-    val nfd: NFD<DirectRegexSimplified> = Json.decodeFromString("""
+    val nfd: NFD<DirectRegexSimplified> = Json.decodeFromString(deserializer = NFDSerializer(), """
         token_nfd_template_to_replace
     """)
 
     val detector = DirectFromRegexTokenDetector(
         nfd
     )
+
+
     try {
         val tokens = detector.getTokens(file.readText())
-        tokens.forEach { tokenMatch ->
-            println("Token found ${tokenMatch.toString()}")
-        }
+        //ParserClass(tokens).parse()
+//        tokens.forEach { tokenMatch ->
+//            println("Token found ${tokenMatch.toString()}")
+//        }
     }catch (e: Exception){
         println("Se ecnontro el siguiente error: ")
         println(e.localizedMessage)

@@ -6,15 +6,14 @@ import cocol.characters.CocolTextValueGetter
 import tokens.CoCoBoiCharacterSet
 import tokens.TokenExpression
 import tokens.TokenExpressionType
-import tokens.TokenMatches
+import tokens.TokenMatch
 import utils.CocolLangIdents
-import utils.Constants
 import utils.Postfixable
 import java.lang.Exception
 import java.util.*
 
 class CocoIgnoreReader(
-    private val tokensSearchIterator: MutableIterator<TokenMatches>,
+    private val tokensSearchIterator: MutableIterator<TokenMatch>,
     private val characters: List<CoCoBoiCharacterSet>
 ) : Postfixable<Pair<String, String>, String> {
     fun read(): TokenExpression {
@@ -130,14 +129,17 @@ class CocoIgnoreReader(
 
             val tokenMatch = tokensSearchIterator.next()
             when(tokenMatch.token.ident){
-                "ident" -> {
+                CocolLangIdents.WhiteSpace.ident -> {
+                    continue
+                }
+                CocolLangIdents.Ident.ident -> {
                     val charSet = characters.firstOrNull { it.ident ==  tokenMatch.match}
                     requireNotNull(charSet){
                         "No se ha declarado ${tokenMatch.match} antes de utilizarlo"
                     }
                     ignoreValue.add(Pair(tokenMatch.token.ident, charSet.value.joinToString("")))
                 }
-                "operator" -> {
+                CocolLangIdents.Operator.ident -> {
                     val operator = tokenMatch.match
                     val operatorCocol = CocolOperatorClass.fromString(operator)
                     val validOperators = listOf(CocolOperatorClass.Minus, CocolOperatorClass.Plus, CocolOperatorClass.Finish, CocolOperatorClass.Range)
@@ -151,19 +153,17 @@ class CocoIgnoreReader(
                     }
 
                 }
-                "string" -> {
+                CocolLangIdents.StringIdent.ident -> {
                     val char = tokenMatch.match
-//                    ignoreValue.add(Pair(tokenMatch.token.ident, Constants.kotlinScriptManger.eval(char).toString()))
                     ignoreValue.add(Pair(tokenMatch.token.ident, StringNormalizer(char).normalize()))
                 }
                 CocolLangIdents.Character.ident -> {
                     val char = tokenMatch.match
                     val norm = StringNormalizer(CocolTextValueGetter(char).get()).normalize()
-//                    ignoreValue.add(Pair(tokenMatch.token.ident, Constants.kotlinScriptManger.eval(char).toString()))
                     ignoreValue.add(Pair(tokenMatch.token.ident, norm))
                 }
                 else -> {
-                    throw Exception("${tokenMatch.match} No es válido en este contexto.")
+                    throw Exception("${tokenMatch.match} No es válido en este contexto de ignore.")
                 }
 
             }

@@ -7,17 +7,39 @@ digit = "0123456789" .
 tab = CHR(9).
 eol = CHR(10).
 
-KEYWORDS
-
-while = "while".
-do = "do".
-if = "if".
-switch = "switch".
-
 TOKENS
 
 ident = letter{letter|digit} EXCEPT KEYWORDS.
 number = digit{digit}.
 
+IGNORE CHR(13) + CHR(10) + CHR(9) + CHR(32).
+
+PRODUCTIONS
+
+Expr= {Stat ";"}".".
+
+Stat = 							(.val composition = Composition<Double>(0.0).)
+	Expression<composition>		(.println(composition.value.toString());.)
+	.
+
+Expression<result: Composition<Double>> =		(.val result1 = Composition<Double>(0.0); val result2 = Composition<Double>(0.0);.)
+	Term<result1>
+	{ (.println("ANTES DE SUMAR");.)   "+"Term<result2>		(.result1.value += result2.value;.)
+	   | "-"Term<result2>		(.result1.value -= result2.value;.)
+	}							(.result.value = result1.value;.)
+	.
+
+Term<result: Composition<Double>>=				(.val result1 = Composition<Double>(0.0); val result2 = Composition<Double>(0.0);.)
+	Factor<result1>
+	{    "*"Factor<result2>	(.result1.value *= result2.value;.)
+	   | "/"Factor<result2>	(.result1.value /= result2.value;.)
+	}							(.result.value=result1.value;.)
+	.
+
+Factor<result: Composition<Double>> =	(.val signo=Composition<Int>(1);.)
+	["-"(.signo.value = -1;.)]
+	( Number<result> | "("Expression<result>")") (.result.value*=signo.value;.).
+
+Number<result: Composition<Double>> =  number (. result.value = currentToken.match.toDouble().).
 
 END Aritmetica

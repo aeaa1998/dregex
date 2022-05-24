@@ -3,8 +3,6 @@ package algos.direct
 import automatons.State
 import dregex.RegexExpression
 import extension.reduceIds
-import kotlinx.serialization.Serializable
-import utils.Identifiable
 
 /**
  * This class represents the state of a direct from regex graph
@@ -22,12 +20,11 @@ class DirectFromRegexState(
     State()
 {
     var marked = false
-    override val id: String
-    get() = values.reduceIds()
+    override val id: String = values.reduceIds()
 
     fun simplified() : DirectRegexSimplified{
         return  DirectRegexSimplified(
-            id,
+            secondaryId,
             secondaryId
         )
     }

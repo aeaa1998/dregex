@@ -15,7 +15,6 @@ import graphs.RegexEdge
 import org.jgrapht.ext.JGraphXAdapter
 import org.jgrapht.graph.DefaultDirectedGraph
 import tokens.TokenExpression
-import utils.Constants
 import java.awt.Color
 import java.io.File
 import java.util.*
@@ -50,31 +49,6 @@ class DirectFromRegex(
         this.regexExpression = expression
 
         expression.setComputedProperties()
-//        val stack = Stack<RegexExpression>()
-//        stack.push(expression)
-//        var head: RegexExpression = expression
-
-//        while (!stack.isEmpty()){
-//            val current = stack.peek()
-//            val finishedSubtrees = current.right === head || current.left === head
-//            val isLeaf = current.left == null && current.right == null
-//            if (finishedSubtrees || isLeaf){
-//                stack.pop()
-//                //Set all the properties like followPos, startPos, endPos
-//                current.setComputedProperties()
-//                head = current
-//            }else{
-//                if (current.right != null){
-//                    stack.push(current.right)
-//                }
-//                if (current.left != null){
-//                    stack.push(current.left)
-//                }
-//            }
-//
-//
-//        }
-
         //Set an initial state
         val initialState = DirectFromRegexState(expression.firstPos.toList())
         //Add it to our stack
@@ -129,11 +103,11 @@ class DirectFromRegex(
                     }
 
                     if (isFinal){
+//                        if (letter == "."){
+//                            print("here")
+//                        }
                         val tks = validValuesFromPointer
                             .filter { !(it is BruteForceEndNode) && it.followPos.any { follow -> follow is BruteForceEndNode } }
-//                            .distinctBy {
-//                                it.tokenExpression.ident
-//                            }
                             .distinctBy {
                                 it.tokenExpression.ident
                             }
@@ -145,21 +119,22 @@ class DirectFromRegex(
 
 
                         var tk = tks.next()
-//                        var check = tk
-//                        while (tks.hasNext() && check.exceptKeywords){
+                        var check = tk
+                        while (tks.hasNext() && check.exceptKeywords){
+                            val compare = tks.next()
+                            if (compare.type.isKeyWord() && check.exceptKeywords && compare._expression.last().toString() == letter){
+                                tk = compare
+                                continue
+                            }
+                            check = compare
+                        }
+
+//                        if (tks.hasNext() && tk.exceptKeywords){
 //                            val compare = tks.next()
-//                            if (compare.type.isKeyWord() && check.exceptKeywords && compare._expression.last().toString() == letter){
+//                            if (compare.type.isKeyWord() && tk.exceptKeywords && compare._expression.last().toString() == letter){
 //                                tk = compare
 //                            }
-//                            check = compare
 //                        }
-
-                        if (tks.hasNext() && tk.exceptKeywords){
-                            val compare = tks.next()
-                            if (compare.type.isKeyWord() && tk.exceptKeywords && compare._expression.last().toString() == letter){
-                                tk = compare
-                            }
-                        }
 
                         val current = transitionTokens[pointer.secondaryId]?.get(letter)
                         if (current == null){
@@ -199,7 +174,6 @@ class DirectFromRegex(
             transitionTokens = transitionTokens
         )
 
-//        buildGraph(nfd)
         return this
     }
 
@@ -281,7 +255,6 @@ class DirectFromRegex(
         nfd.states.forEach {
             val rowValues = mutableListOf<String>()
             rowValues.add(it.secondaryId)
-//            rowValues.add(it.values.map { it.expression }.joinToString(", "))
             nfd.alphabet.forEach { alph ->
                 rowValues.add(nfd.transitions[it.secondaryId]?.get(alph)?.secondaryId ?: "")
             }
