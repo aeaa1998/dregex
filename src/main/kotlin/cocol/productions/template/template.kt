@@ -35,9 +35,9 @@ class TemplateNameHere(
     fun checkNextTokenIs(ident: String){
         if(nextTokenMatch.token.ident != ident){
             println("El token debía de ser un $ident se recibio ${nextTokenMatch.token.ident} por el valor '${nextTokenMatch.match}'")
+        }else{
+            moveToken()
         }
-        moveToken()
-
     }
 
     fun parse(){

@@ -15,23 +15,23 @@ white = blanco{blanco}.
 
 PRODUCTIONS
 
-Expr= {Stat ";"{white}}{white}".".
+Expr= {Stat {white}";"{white}}{white}".".
 
 Stat = 							(.val comp=Composition<Double>(0.0);.)
 	Expression<comp>		(.println("Resultado: ${comp.value}");.)
 	.
 
 Expression<result: Composition<Double>> =			(.val result1=Composition<Double>(0.0); val result2=Composition<Double>(0.0);.)
-	Term<result1>
-	{    "+"Term<result2>		(.result1.value+=result2.value;.)
-	   | "-"Term<result2>		(.result1.value-=result2.value;.)
+	Term<result1> {white}
+	{  ("+" {white} Term<result2>		(.result1.value+=result2.value;.) {white})
+	   | ("-" {white} Term<result2>		(.result1.value-=result2.value;.) {white})
 	}								(.result.value=result1.value;.)
 	.
 
 Term<result: Composition<Double>>=				(.val result1=Composition<Double>(0.0); val result2=Composition<Double>(0.0);.)
-	Factor<result1>
-	{    "*"Factor<result2>	(.result1.value*=result2.value;.)
-	   | "/"Factor<result2>	(.result1.value/=result2.value;.)
+	Factor<result1> {white}
+	{  ( "*" {white} Factor<result2>	(.result1.value*=result2.value;.) {white})
+	   | ("/" {white} Factor<result2>	(.result1.value/=result2.value;.) {white})
 	}							(.result.value=result1.value;.)
 	.
 
